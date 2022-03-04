@@ -1,0 +1,47 @@
+﻿<mah:MetroWindow  xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls" 
+                  x:Class="ApexBytez.MediaRecon.WizardMainWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                  xmlns:local="clr-namespace:ApexBytez.MediaRecon"
+                  xmlns:controls="clr-namespace:MvvmWizard.Controls;assembly=MvvmWizard"
+                  xmlns:view="clr-namespace:ApexBytez.MediaRecon.View" xmlns:viewModels="clr-namespace:ApexBytez.MediaRecon.ViewModel"
+                  mc:Ignorable="d" 
+                  Title="MediaRecon" 
+                  Height="600" Width="800" WindowStartupLocation="CenterScreen">
+
+    <Window.DataContext>
+        <viewModels:WizardViewModel />
+    </Window.DataContext>
+
+    <controls:Wizard FinishCommand="{Binding CloseCommand}" 
+                     SharedContext="{Binding SharedContext}" 
+                     NavigationBlockMinHeight="50">
+        <controls:WizardStep ViewType="{x:Type view:WelcomeView}" 
+                             SkipButtonIsEnabled="False" 
+                             SkipButtonVisibility="Collapsed"
+                             ForwardButtonTitle="Setup" 
+                             BackButtonVisibility="Collapsed" />
+        <controls:WizardStep ViewType="{x:Type view:SetupView}" 
+                             SkipButtonIsEnabled="False" 
+                             SkipButtonVisibility="Collapsed"
+                             BackButtonTitle="Intro"
+                             BackButtonWidth="100"
+                             ForwardButtonTitle="Analyze"
+                             ForwardButtonIsEnabled="{Binding UnderlyingDataContext.ForwardButtonIsEnabled, RelativeSource={RelativeSource Self}}"/>
+        <controls:WizardStep ViewType="{x:Type view:AnalysisView}" 
+                             SkipButtonIsEnabled="False" 
+                             SkipButtonVisibility="Collapsed"
+                             BackButtonTitle="Setup"
+                             BackButtonWidth="100"
+                             ForwardButtonTitle="Review" />
+        <controls:WizardStep ViewType="{x:Type view:ReviewView}" 
+                             SkipButtonIsEnabled="False" 
+                             SkipButtonVisibility="Collapsed"
+                             BackButtonTitle="Analysis"
+                             BackButtonWidth="100"
+                             ForwardButtonTitle="Save Results" />
+    </controls:Wizard>
+    
+</mah:MetroWindow>

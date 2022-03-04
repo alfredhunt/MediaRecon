@@ -1,0 +1,112 @@
+﻿<UserControl x:Class="ApexBytez.MediaRecon.View.ReviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:MediaRecon="clr-namespace:ApexBytez.MediaRecon"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        
+        <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
+            <GroupBox Header="{Binding Name}" Background="CornflowerBlue">
+                <TextBlock Text="{Binding Path}" />
+            </GroupBox>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type MediaRecon:DuplicateFiles}">
+            <Expander>
+                <Expander.Header>
+                    <DockPanel HorizontalAlignment="Stretch">
+                        <Label DockPanel.Dock="Right" Content="Duplicate Files"/>
+                        <TextBlock Text="{Binding Name}"/>
+                    </DockPanel>
+                </Expander.Header>
+                <ListView ItemsSource="{Binding Files}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="{x:Type ListViewItem}">
+                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </Expander>
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type MediaRecon:ConflictedFiles}">
+            <Expander>
+                <Expander.Header>
+                    <DockPanel>
+                        <TextBlock Text="{Binding Description}"/>
+                    </DockPanel>
+                </Expander.Header>
+                <ListView ItemsSource="{Binding ReconciledFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+
+                    <ListView.Resources>
+                        <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
+                            <GroupBox Header="Unique">
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Renamed: "/>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </StackPanel>
+                            </GroupBox>
+                        </DataTemplate>
+
+                        <DataTemplate DataType="{x:Type MediaRecon:DuplicateFiles}">
+                            <GroupBox>
+                                <GroupBox.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </StackPanel>
+
+                                </GroupBox.Header>
+
+                                <ListView ItemsSource="{Binding Files}" >
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="{x:Type ListViewItem}">
+                                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <Image Source="{Binding FullName}" Width="300"/>
+                                                <TextBlock Text="{Binding FullName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                    <ListView.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <VirtualizingStackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListView.ItemsPanel>
+                                </ListView>
+
+                            </GroupBox>
+                        </DataTemplate>
+                    </ListView.Resources>
+                </ListView>
+            </Expander>
+        </DataTemplate>
+        
+    </UserControl.Resources>
+    
+    
+    <DockPanel>
+        <Label DockPanel.Dock="Top" Content="Review and update automatic renamings before saving your results"/>
+        <GroupBox Margin="2" Header="Renamed Files">
+            <ListView ItemsSource="{Binding RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel Orientation="Vertical"/>
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+            </ListView>
+        </GroupBox>
+    </DockPanel>
+</UserControl>

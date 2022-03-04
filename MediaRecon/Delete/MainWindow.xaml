@@ -1,0 +1,271 @@
+﻿<mah:MetroWindow x:Class="MediaRecon.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                 xmlns:Dialog="clr-namespace:MahApps.Metro.Controls.Dialogs;assembly=MahApps.Metro"
+                 xmlns:MediaRecon="clr-namespace:ApexBytez.MediaRecon" 
+                 xmlns:io="clr-namespace:System.IO;assembly=mscorlib"
+                 xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks" 
+                 xmlns:view="clr-namespace:ApexBytez.MediaRecon.View" 
+                 xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters"
+                 Dialog:DialogParticipation.Register="{Binding}"
+                 WindowStartupLocation="CenterScreen"
+                 mc:Ignorable="d" d:DataContext="{d:DesignInstance Type=MediaRecon:MainWindowViewModel}"
+                 Title="MediaRecon" Height="1080" Width="1920" Loaded="MainWindow_Loaded">
+
+    <mah:MetroWindow.Resources>
+
+        
+
+        <DataTemplate DataType="{x:Type MediaRecon:ReconciledDirectory}">
+            <DockPanel>
+                <Label DockPanel.Dock="Bottom" Content="{Binding Name}"/>
+                <iconPacks:PackIconMaterialDesign Kind="FolderOpen" />
+            </DockPanel>
+        </DataTemplate>
+
+
+        <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
+            <GroupBox Header="{Binding Name}" Background="CornflowerBlue">
+                <TextBlock Text="{Binding Path}" />
+            </GroupBox>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type MediaRecon:DuplicateFiles}">
+            <Expander Background="Green">
+                <Expander.Header>
+                    <DockPanel HorizontalAlignment="Stretch">
+                        <Label DockPanel.Dock="Right" Content="Duplicate Files"/>
+                        <TextBlock Text="{Binding Name}"/>
+                    </DockPanel>
+                </Expander.Header>
+                <ListView ItemsSource="{Binding Files}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="{x:Type ListViewItem}">
+                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </Expander>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type MediaRecon:ConflictedFiles}">
+            <Expander>
+                <Expander.Header>
+                    <DockPanel>
+                        <TextBlock Text="{Binding Description}"/>
+                    </DockPanel>
+                </Expander.Header>
+                <ListView ItemsSource="{Binding ReconciledFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+
+                    <ListView.Resources>
+                        <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
+                            <GroupBox Header="Unique">
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Renamed: "/>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </StackPanel>
+                            </GroupBox>
+                        </DataTemplate>
+
+                        <DataTemplate DataType="{x:Type MediaRecon:DuplicateFiles}">
+                            <GroupBox>
+                                <GroupBox.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </StackPanel>
+
+                                </GroupBox.Header>
+
+                                <ListView ItemsSource="{Binding Files}" >
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="{x:Type ListViewItem}">
+                                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <Image Source="{Binding FullName}" Width="300"/>
+                                                <TextBlock Text="{Binding FullName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                    <ListView.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <VirtualizingStackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListView.ItemsPanel>
+                                </ListView>
+
+                            </GroupBox>
+                        </DataTemplate>
+                    </ListView.Resources>
+                </ListView>
+
+            </Expander>
+        </DataTemplate>
+    </mah:MetroWindow.Resources>
+
+    <!--<mah:MetroWindow.LeftWindowCommands>
+        <mah:WindowCommands>
+            <Button Click="" ToolTip="New">
+                <iconPacks:PackIconModern Width="22"
+                                  Height="22"
+                                  Kind="SocialGithubOctocat" />
+            </Button>
+        </mah:WindowCommands>
+    </mah:MetroWindow.LeftWindowCommands>-->
+
+    <DockPanel>
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+            <StatusBarItem Grid.Column="0" HorizontalContentAlignment="Left">
+                <Label Content="{Binding StatusBarDescription}"/>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="1" HorizontalContentAlignment="Stretch">
+                <ProgressBar
+                    Value="{Binding ProgressBarValue}" 
+                    Maximum="{Binding ProgressBarMaximum}"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <GroupBox Header="Analysis Results" DockPanel.Dock="Bottom">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+
+                <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource AnalysisLabel}" Content="Folders"/>
+                <Label Grid.Row="0" Grid.Column="1" Style="{StaticResource AnalysisLabel}" Content="{Binding SourceFolders.Count}"/>
+                <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource AnalysisLabel}" Content="Files"/>
+                <Label Grid.Row="1" Grid.Column="1" Style="{StaticResource AnalysisLabel}" Content="{Binding FileCount}"/>
+                <Label Grid.Row="2" Grid.Column="0" Style="{StaticResource AnalysisLabel}" Content="Size on Disk"/>
+                <Label Grid.Row="2" Grid.Column="1" Style="{StaticResource AnalysisLabel}" Content="{Binding SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
+
+                <Label Grid.Row="0" Grid.Column="2" Style="{StaticResource AnalysisLabel}" Content="Analysis Time"/>
+                <Label Grid.Row="0" Grid.Column="3" Style="{StaticResource AnalysisLabel}" Content="{Binding AnalysisTime}"/>
+                <Label Grid.Row="1" Grid.Column="2" Style="{StaticResource AnalysisLabel}" Content="Files Analyzed"/>
+                <Label Grid.Row="1" Grid.Column="3" Style="{StaticResource AnalysisLabel}" Content="{Binding NumberOfFiles}"/>
+                <Label Grid.Row="2" Grid.Column="2" Style="{StaticResource AnalysisLabel}" Content="Data Analyzed"/>
+                <Label Grid.Row="2" Grid.Column="3" Style="{StaticResource AnalysisLabel}" Content="{Binding TotalSize, Converter={converters:FileSizeFormatConverter}}" />
+                
+
+                <Label Grid.Row="1" Grid.Column="4" Style="{StaticResource AnalysisLabel}" Content="Duplicate Files Found"/>
+                <Label Grid.Row="1" Grid.Column="5" Style="{StaticResource AnalysisLabel}" Content="{Binding DuplicateCount}"/>
+                <Label Grid.Row="2" Grid.Column="4" Style="{StaticResource AnalysisLabel}" Content="Size on Disk"/>
+                <Label Grid.Row="2" Grid.Column="5" Style="{StaticResource AnalysisLabel}" Content="{Binding DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
+
+                <Label Grid.Row="1" Grid.Column="6" Style="{StaticResource AnalysisLabel}" Content="Distinct Files Found"/>
+                <Label Grid.Row="1" Grid.Column="7" Style="{StaticResource AnalysisLabel}" Content="{Binding DistinctCount}"/>
+                <Label Grid.Row="2" Grid.Column="6" Style="{StaticResource AnalysisLabel}" Content="Size on Disk"/>
+                <Label Grid.Row="2" Grid.Column="7" Style="{StaticResource AnalysisLabel}" Content="{Binding DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
+
+                <Button Grid.Column="8" Grid.Row="0" Grid.RowSpan="3" Content="Save" Command="{Binding SaveCommand}" Margin="3"/>
+            </Grid>
+        </GroupBox>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <GridSplitter Grid.Column="1" Grid.RowSpan="3" Width="3"/>
+            <GridSplitter Grid.Column="3" Grid.RowSpan="3" Width="3"/>
+
+            <StackPanel Grid.Column="0" >
+                <Label Content="Step 1: Add Folders"/>
+                <!--<TextBlock Text="{Binding StepOneDescription}"/>-->
+                <Button DockPanel.Dock="Right" Content="Add Source Folder" Margin="3"
+                        Command="{Binding AddSourceFolderCommand}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" >
+                <Label Content="Step 2: Analyze and Resolve Conflicts"/>
+                <Button Grid.Column="0" Grid.Row="2" Content="Analyze" Command="{Binding AnalyzeCommand}" Margin="3"/>
+            </StackPanel>
+            <StackPanel Grid.Column="4" >
+                <Label Content="Step 3: Save your reconciled data"/>
+                <!--<TextBlock Text="{Binding StepThreeDescription}"/>-->
+                <CheckBox Content="Smart Sort" IsChecked="{Binding IsSmartSortChecked, Mode=OneWay}"
+                          Command="{Binding SmartSortCommand}"
+                          CommandParameter="{Binding RelativeSource={RelativeSource Mode=Self}, Path=IsChecked}"/>
+
+                <DockPanel/>
+            </StackPanel>
+
+            <GroupBox Grid.Column="0" Grid.Row="1" Header="Source Folders" Margin="3" >
+                <ListBox x:Name="SourceListBox"
+                         ItemsSource="{Binding SourceFolders}" 
+                         SelectedIndex="{Binding SelectedSourceFolderIndex}" 
+                         AllowDrop="True"
+                         DragEnter="SourceListBox_DragEnter"
+                         DragOver="SourceListBox_DragOver"
+                         Drop="SourceListBox_Drop"
+                         KeyUp="SourceListBox_KeyUp">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                </ListBox>
+            </GroupBox>
+
+            <GroupBox Grid.Column="2" Grid.Row="1" Margin="3" Header="Automatic Renamings">
+                <ListView ItemsSource="{Binding ConflictedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                </ListView>
+            </GroupBox>
+
+            <GroupBox Grid.Column="4" Grid.Row="1" Margin="3" Header="Reconciled Data">
+                <view:FolderView ItemsSource="{Binding ReconciledDirectories}" ViewStyle="List"/>
+            </GroupBox>
+
+
+
+        </Grid>
+    </DockPanel>
+
+</mah:MetroWindow>
