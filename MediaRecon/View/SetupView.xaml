@@ -3,21 +3,40 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
+             xmlns:local="clr-namespace:ApexBytez.MediaRecon.View" 
+             xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" 
+             d:DataContext="{d:DesignInstance Type=viewmodel:SetupViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <DockPanel Grid.Column="0" >
+        
+
+        <GroupBox Header="Setup and Configuration" Margin="2" 
+                  DockPanel.Dock="Top">
+            <StackPanel>
+                <CheckBox Content="Sort by Date" Margin="3" IsChecked="{Binding Analysis.SortByDate}"/>
+                <Label Content="Destination folder"/>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Destination Folder" Margin="2" 
+                  DockPanel.Dock="Top">
+            <StackPanel Orientation="Horizontal">
+                <Label Content="Destination:"/>
+                <TextBlock Text="{Binding Analysis.DestinationDirectory}"/>
+            </StackPanel>
+        </GroupBox>
+        <Button Content="Set Destination Folder" Margin="3"
+                DockPanel.Dock="Top"
+                Command="{Binding SelectedDestinationDirectory}"/>
+        
+
         <Button Content="Add Source Folder" Margin="3"
                 DockPanel.Dock="Bottom"
                 Command="{Binding AddSourceFolderCommand}"/>
-        
-        <StackPanel DockPanel.Dock="Top">
-            <Label Content="Choose options and add folders to analyze"/>
-            <CheckBox Content="Sort by Date" Margin="3"/>
-        </StackPanel>
         <GroupBox Header="Source Folders" Margin="2" >
             <ListBox x:Name="SourceListBox"
-                         ItemsSource="{Binding SourceFolders}" 
+                         ItemsSource="{Binding Analysis.SourceFolders}" 
                          SelectedIndex="{Binding SelectedSourceFolderIndex}" 
                          AllowDrop="True"
                          DragEnter="SourceListBox_DragEnter"
@@ -31,6 +50,6 @@
                 </ListBox.ContextMenu>
             </ListBox>
         </GroupBox>
-        
+
     </DockPanel>
 </UserControl>

@@ -1,0 +1,479 @@
+﻿using ApexBytez.MediaRecon.View;
+using Microsoft.Toolkit.Mvvm.ComponentModel;
+using Microsoft.Toolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+
+namespace ApexBytez.MediaRecon.ViewModel
+{
+    internal class Analysis : ObservableObject
+    {
+        private long folderCount;
+        private long fileCount;
+        private long sourceFoldersSize;
+        private long numberOfFiles;
+        private long totalSize;
+        private long numberOfDuplicateFiles;
+        private long duplicateSize;
+        private long numberOfDistinctFiles;
+        private long distinctSize;
+        private double progressBarValue;
+        private double progressBarMaximum;
+        private TimeSpan analysisTime;
+
+        private Subject<ConflictedFiles> _conflictResolutions;
+        private Subject<ReconciledFile> _reconciledFiles;
+
+        private IDisposable resolutionDisposable;
+        private IDisposable reconciledDisposable;
+
+        private bool sortByDate = true;
+
+        private string destinationFolder;
+        private bool analysisInProgress;
+
+        public string DestinationDirectory { get => destinationFolder; set => SetProperty(ref destinationFolder, value); }
+
+        private ObservableCollection<string> sourceFolders = new ObservableCollection<string>();
+        public ObservableCollection<string> SourceFolders { get => sourceFolders; set => SetProperty(ref sourceFolders, value); }
+
+        private ObservableCollection<IFolderViewItem> reconciledDirectories = new ObservableCollection<IFolderViewItem>();
+        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get => reconciledDirectories; set => SetProperty(ref reconciledDirectories, value); }
+
+        private ObservableCollection<ConflictedFiles> renamedFiles = new ObservableCollection<ConflictedFiles>();
+
+        public ObservableCollection<ConflictedFiles> RenamedFiles { get => renamedFiles; set => SetProperty(ref renamedFiles, value); }
+
+        private ObservableCollection<string> saveResultsLog = new ObservableCollection<string>();
+        public ObservableCollection<string> SaveResultsLog { get => saveResultsLog; set => SetProperty(ref saveResultsLog, value); }
+
+        public long FolderCount { get => folderCount; set => SetProperty(ref folderCount, value); }
+        public long FileCount { get => fileCount; set => SetProperty(ref fileCount, value); }
+        public long SourceFoldersSize { get => sourceFoldersSize; set => SetProperty(ref sourceFoldersSize, value); }
+        public long NumberOfFiles { get => numberOfFiles; set => SetProperty(ref numberOfFiles, value); }
+        public long TotalSize { get => totalSize; set => SetProperty(ref totalSize, value); }
+        public long DuplicateCount { get => numberOfDuplicateFiles; set => SetProperty(ref numberOfDuplicateFiles, value); }
+        public long DuplicateSize { get => duplicateSize; set => SetProperty(ref duplicateSize, value); }
+        public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
+        public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
+        public double ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
+        public double ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
+        public TimeSpan AnalysisTime { get => analysisTime; set => SetProperty(ref analysisTime, value); }
+        public bool SortByDate { get => sortByDate; set => SetProperty(ref sortByDate, value); }
+        public bool Running { get => analysisInProgress; set => SetProperty(ref analysisInProgress, value); }
+
+        private RelayCommand cancelCommand;
+        private CancellationTokenSource cancellationTokenSource;
+        private CancellationToken cancellationToken;
+        public RelayCommand CancelCommand => cancelCommand ??= new RelayCommand(Cancel, CanCancel);
+        private string cancelCommandContent = "Cancel";
+        public string CancelCommandContent { get => cancelCommandContent; set => SetProperty(ref cancelCommandContent, value); }
+
+        public void Cancel()
+        {
+            cancellationTokenSource.Cancel();
+        }
+
+        public bool CanCancel()
+        {
+            return Running &&
+                cancellationTokenSource != null &&
+                !cancellationTokenSource.IsCancellationRequested;
+        }
+
+        public async Task SaveResultsAsync()
+        {
+            // TODO: Refactor Setup/Teardown on these async methods
+            cancellationTokenSource = new CancellationTokenSource();
+            cancellationToken = cancellationTokenSource.Token;
+            Running = true;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CancelCommand.NotifyCanExecuteChanged();
+            });
+            TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
+            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
+                .TimeInterval()
+                .Subscribe(x =>
+                {
+                    elapsedTime = elapsedTime.Add(x.Interval);
+                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    {
+                        AnalysisTime = elapsedTime;
+                    });
+                });
+            // TODO: Refactor Setup/Teardown on these async methods
+
+            string formatFolderExist = "Directory Exists: {0}";
+            string formatFolderCreated = "Created Directory: {0}";
+            string logMessage = string.Empty;
+            try
+            {
+                
+
+                // Would possible be best if we could created all the directories first then really use
+                //  the power of parallel processing on the files in a flat list
+                if (SortByDate)
+                {
+                    foreach (var year in ReconciledDirectories
+                        .Where(x => x is IFolderViewFolder)
+                        .Select(x => x as IFolderViewFolder))
+                    {
+                        var yearDir = Path.Combine(DestinationDirectory, year.Name);
+                        var yearDirExist = Directory.Exists(yearDir);
+                        logMessage = string.Format(yearDirExist ? formatFolderExist : formatFolderCreated, yearDir);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            SaveResultsLog.Add(logMessage);
+                        });
+
+
+
+                        foreach (var month in year.Items
+                            .Where(x => x is IFolderViewFolder && !x.Name.Equals(".."))
+                            .Select(x => x as IFolderViewFolder))
+                        {
+                            var monthDir = Path.Combine(yearDir, month.Name);
+                            var monthDirExist = Directory.Exists(monthDir);
+                            logMessage = string.Format(monthDirExist ? formatFolderExist : formatFolderCreated, monthDir);
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                SaveResultsLog.Add(logMessage);
+                            });
+
+                        }
+                    }
+                }
+
+                // TODO:  Need to figure this out...
+
+                // I want parallel to run on a flat flist, not the nested structure I have in ReconciledDirectories
+
+                // Don't try and recurse ReconciledDirectories.  Instead lets give the reconciled files a ReconciledPath
+                //  which will be a combination of the reconciled directories plus the configured destination directory
+                // Actually, we'll need to created the directories as well so I'm not 100% sure which is best.
+
+
+                //await Parallel.ForEachAsync(reconciledFiles,
+                //    new ParallelOptions { MaxDegreeOfParallelism = 16, CancellationToken = cancellationToken },
+                //    async (file, ct) =>
+                //    {
+                //        switch (file.ReconType)
+                //        {
+                //            case ReconType.Distinct:
+                //                //logMessage = string.Format("Saving: {0}",);
+
+                //                break;
+                //            case ReconType.Duplicate:
+                //                break;
+                //        }
+                //    });
+            }
+            catch (OperationCanceledException ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                observableTimer.Dispose();
+            }
+
+
+            // TODO: Refactor Setup/Teardown on these async methods
+            Running = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CancelCommand.NotifyCanExecuteChanged();
+            });
+            CancelCommandContent = "Done";
+            // TODO: Refactor Setup/Teardown on these async methods
+        }
+
+
+        private void ResetAnlysis()
+        {
+            FolderCount = 0;
+            FileCount = 0;
+            SourceFoldersSize = 0;
+            NumberOfFiles = 0;
+            TotalSize = 0;
+            DuplicateCount = 0;
+            DuplicateSize = 0;
+            DistinctCount = 0;
+            DistinctSize = 0;
+            ProgressBarValue = 0;
+            ProgressBarMaximum = 100;
+            AnalysisTime = TimeSpan.Zero;
+            Running = false;
+        }
+
+        public async Task RunAnalysisAsync()
+        {
+            ResetAnlysis();
+
+            cancellationTokenSource = new CancellationTokenSource();
+            cancellationToken = cancellationTokenSource.Token;
+            Running = true;
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CancelCommand.NotifyCanExecuteChanged();
+            });
+
+            FolderCount = SourceFolders.Count();
+
+            // This sorted list is binned on file name
+            var sortedFiles = FileAnalysis.GetSortedFileInfo(SourceFolders);
+            FileCount = sortedFiles.Sum(x => x.Value.Count);
+            SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
+
+            TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
+
+            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
+                .TimeInterval()
+                .Subscribe(x =>
+                {
+                    elapsedTime = elapsedTime.Add(x.Interval);
+                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    {
+                        AnalysisTime = elapsedTime;
+                    });
+                });
+
+            _conflictResolutions = new Subject<ConflictedFiles>();
+            resolutionDisposable = _conflictResolutions
+                .Subscribe(x =>
+                {
+                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    {
+                        // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
+                        // Would have to use a concurrent object if not observable
+                        RenamedFiles.Add(x);
+                    });
+                });
+
+            _reconciledFiles = new Subject<ReconciledFile>();
+            reconciledDisposable = _reconciledFiles
+                .Buffer(TimeSpan.FromMilliseconds(24))
+                .Where(x => x.Count > 0)
+                .Subscribe(x =>
+                {
+                    long distinctCount = DistinctCount;
+                    long distinctSize = DistinctSize;
+                    long duplicateCount = DuplicateCount;
+                    long duplicateSize = DuplicateSize;
+                    long numberOfFiles = NumberOfFiles;
+
+                    foreach (var file in x)
+                    {
+                        switch (file.ReconType)
+                        {
+                            case ReconType.Duplicate:
+                                var duplicateFiles = (DuplicateFiles)file;
+                                InsertReconciledFile(duplicateFiles);
+                                numberOfFiles += duplicateFiles.TotalFileCount;
+                                distinctCount += duplicateFiles.NumberOfDistinctFiles;
+                                duplicateCount += duplicateFiles.NumberOfDuplicateFiles;
+                                distinctSize += duplicateFiles.Size;
+                                duplicateSize += duplicateFiles.DuplicateFileSystemSize;
+
+                                break;
+                            case ReconType.Distinct:
+                                var distinctFile = (UniqueFile)file;
+                                InsertReconciledFile(distinctFile);
+                                numberOfFiles++;
+                                distinctCount++;
+                                distinctSize += distinctFile.Size;
+                                break;
+                        }
+                    }
+
+                    var progressBarValue = ((double)numberOfFiles / FileCount) * 100;
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        DistinctCount = distinctCount;
+                        DuplicateCount = duplicateCount;
+                        DistinctSize = distinctSize;
+                        DuplicateSize = duplicateSize;
+                        NumberOfFiles = numberOfFiles;
+                        TotalSize = DistinctSize + DuplicateSize;
+                        ProgressBarValue = progressBarValue;
+                    });
+                });
+
+            try
+            {
+                await Parallel.ForEachAsync(sortedFiles,
+                    new ParallelOptions { MaxDegreeOfParallelism = 16, CancellationToken = cancellationToken },
+                    async (fileList, ct) =>
+                    {
+                        //StatusBarDescription = string.Format("Processing {0}", fileList.Value.First().FullName);
+
+                        if (fileList.Value.Count() == 1)
+                        {
+                            var uniqueFile = new UniqueFile(fileList.Value.First());
+                            _reconciledFiles.OnNext(uniqueFile);
+                        }
+                        // If 2+ items, we analyze
+                        else if (fileList.Value.Count() > 1)
+                        {
+                            var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList.Value, ct);
+                            if (bitwiseGoupings.Count() == 1)
+                            {
+                                var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
+                                _reconciledFiles.OnNext(duplicateFiles);
+                            }
+
+                            // If 2+, then we have files with the same name but different data and it gets a bit trickier
+                            else if (bitwiseGoupings.Count() > 1)
+                            {
+                                var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
+                                _conflictResolutions.OnNext(conflictedFiles);
+                                foreach (var file in conflictedFiles.ReconciledFiles)
+                                {
+                                    _reconciledFiles.OnNext(file);
+                                }
+                            }
+                        }
+                    });
+            }
+            catch (OperationCanceledException ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                observableTimer.Dispose();
+            }
+
+            Running = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CancelCommand.NotifyCanExecuteChanged();
+            });
+            CancelCommandContent = "Done";
+        }
+
+        private void InsertReconciledFile(ReconciledFile reconciled)
+        {
+            if (!sortByDate)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ReconciledDirectories.Add(reconciled);
+                });
+            }
+            else
+            {
+                bool isYearNew = false;
+                bool isMonthNew = false;
+                var year = reconciled.LastWriteTime.Year.ToString();
+                var month = reconciled.LastWriteTime.ToString("MMMM");
+
+                var yearDir = ReconciledDirectories.FirstOrDefault(x => x.Name.Equals(year)) as ReconciledDirectory;
+                if (yearDir == null)
+                {
+                    var sentinel = new ReconciledDirectory("..", ReconciledDirectories);
+                    yearDir = new ReconciledDirectory(year, sentinel);
+                    isYearNew = true;
+                }
+
+                var monthDir = yearDir.Items.FirstOrDefault(x => x.Name.Equals(month)) as ReconciledDirectory;
+                if (monthDir == null)
+                {
+                    var sentinel = new ReconciledDirectory("..", yearDir.Items);
+                    monthDir = new ReconciledDirectory(month, sentinel);
+                    isMonthNew = true;
+                }
+
+                // If year is new, you can make whole structure before dispatch invoking
+                // If the month is new, you only need to dispatch on the year, not month
+                if (isYearNew)
+                {
+                    monthDir.Add(reconciled);
+                    yearDir.Add(monthDir);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        ReconciledDirectories.Add(yearDir);
+                    });
+                }
+                else if (isMonthNew)
+                {
+                    monthDir.Add(reconciled);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        yearDir.Add(monthDir);
+                    });
+                }
+                else
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        monthDir.Add(reconciled);
+                    });
+                }
+            }
+        }
+
+        private async Task<List<List<FileInfo>>> ToBitwiseGroupsAsync(List<FileInfo> fileList, CancellationToken cancellationToken)
+        {
+            var bitwiseGoupings = new List<List<FileInfo>>();
+
+            // filelist here has all of the files with the same name
+            // We can group by length
+            var groupedByLength = fileList.GroupBy(x => x.Length);
+
+            foreach (var filesWithSameLength in groupedByLength)
+            {
+                if (filesWithSameLength.Count() == 1)
+                {
+                    // Only 1 file this length with this name, no hash should match
+                    bitwiseGoupings.Add(new List<FileInfo> { filesWithSameLength.First() });
+                }
+                else
+                {
+                    List<Tuple<byte[], FileInfo>> fileHashes = new List<Tuple<byte[], FileInfo>>();
+                    foreach (var fileInfo in filesWithSameLength)
+                    {
+                        byte[] hash;
+                        using (var fs = fileInfo.OpenRead())
+                        {
+                            hash = await MD5.Create().ComputeHashAsync(fs, cancellationToken);
+                        }
+                        fileHashes.Add(new Tuple<byte[], FileInfo>(hash, fileInfo));
+                    }
+                    foreach (var files in fileHashes.GroupBy(x => x.Item1, new ArrayComparer<byte>()))
+                    {
+                        IEnumerable<FileInfo>? filesPerHash = files.Select(x => x.Item2);
+                        bitwiseGoupings.Add(filesPerHash.ToList());
+                    }
+                }
+            }
+
+            return bitwiseGoupings;
+        }
+
+    }
+    class ArrayComparer<T> : IEqualityComparer<T[]>
+    {
+        public bool Equals(T[] x, T[] y)
+        {
+            return x.SequenceEqual(y);
+        }
+
+        public int GetHashCode(T[] obj)
+        {
+            return obj.Aggregate(string.Empty, (s, i) => s + i.GetHashCode(), s => s.GetHashCode());
+        }
+    }
+}

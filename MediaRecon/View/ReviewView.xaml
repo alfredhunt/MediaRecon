@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:MediaRecon="clr-namespace:ApexBytez.MediaRecon"
+             xmlns:MediaRecon="clr-namespace:ApexBytez.MediaRecon" xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     
     <UserControl.Resources>
         
         <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
-            <GroupBox Header="{Binding Name}" Background="CornflowerBlue">
+            <GroupBox Header="{Binding Name}">
                 <TextBlock Text="{Binding Path}" />
             </GroupBox>
         </DataTemplate>
@@ -100,7 +100,7 @@
     <DockPanel>
         <Label DockPanel.Dock="Top" Content="Review and update automatic renamings before saving your results"/>
         <GroupBox Margin="2" Header="Renamed Files">
-            <ListView ItemsSource="{Binding RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView ItemsSource="{Binding Analysis.RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListView.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel Orientation="Vertical"/>

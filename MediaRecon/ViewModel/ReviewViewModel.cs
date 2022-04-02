@@ -30,19 +30,14 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         public override Task OnTransitedTo(TransitionContext transitionContext)
         {
-            RenamedFiles = transitionContext.SharedContext["RenamedFiles"] as IEnumerable<ConflictedFiles>;
-            reconciled = transitionContext.SharedContext["Reconciled"] as IEnumerable<IFolderViewItem>;
-
-            Debug.Assert(RenamedFiles != null);
-            Debug.Assert(reconciled != null);
+            Analysis = transitionContext.SharedContext["Analysis"] as Analysis;
 
             // Load data here
             return base.OnTransitedTo(transitionContext);
         }
-        private IEnumerable<IFolderViewItem> reconciled = new List<IFolderViewItem>();
 
-        private IEnumerable<ConflictedFiles> renamedFiles = new List<ConflictedFiles>();
+        private Analysis? analysis;
+        public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
 
-        public IEnumerable<ConflictedFiles> RenamedFiles { get => renamedFiles; set => SetProperty(ref renamedFiles, value); }
     }
 }

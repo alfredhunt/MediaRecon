@@ -9,7 +9,7 @@
                   xmlns:view="clr-namespace:ApexBytez.MediaRecon.View" xmlns:viewModels="clr-namespace:ApexBytez.MediaRecon.ViewModel"
                   mc:Ignorable="d" 
                   Title="MediaRecon" 
-                  Height="600" Width="800" WindowStartupLocation="CenterScreen">
+                  Height="600" Width="1000" WindowStartupLocation="CenterScreen">
 
     <Window.DataContext>
         <viewModels:WizardViewModel />
@@ -35,13 +35,20 @@
                              SkipButtonVisibility="Collapsed"
                              BackButtonTitle="Setup"
                              BackButtonWidth="100"
-                             ForwardButtonTitle="Review" />
+                             ForwardButtonTitle="Review Changes" 
+                             ForwardButtonIsEnabled="{Binding UnderlyingDataContext.ForwardButtonIsEnabled, RelativeSource={RelativeSource Self}}"/>
         <controls:WizardStep ViewType="{x:Type view:ReviewView}" 
                              SkipButtonIsEnabled="False" 
                              SkipButtonVisibility="Collapsed"
                              BackButtonTitle="Analysis"
                              BackButtonWidth="100"
                              ForwardButtonTitle="Save Results" />
+        <controls:WizardStep ViewType="{x:Type view:SaveView}" 
+                             SkipButtonIsEnabled="False" 
+                             SkipButtonVisibility="Collapsed"
+                             BackButtonTitle="Review"
+                             BackButtonWidth="100"
+                             ForwardButtonTitle="Done" />
     </controls:Wizard>
     
 </mah:MetroWindow>

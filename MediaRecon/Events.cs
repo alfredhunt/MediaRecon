@@ -27,8 +27,8 @@ namespace ApexBytez.MediaRecon.Events
     }
     public class MainWindowLoaded
     {
-        public MainWindow MainWindow { get; private set; }
-        public MainWindowLoaded(MainWindow window)
+        public Window MainWindow { get; private set; }
+        public MainWindowLoaded(Window window)
         {
             MainWindow = window;
         }

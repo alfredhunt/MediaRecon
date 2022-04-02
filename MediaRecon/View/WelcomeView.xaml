@@ -6,7 +6,8 @@
              xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Background="blue">
-        <Label Content="Welcome"/>
+    <Grid>
+        <Label Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Content="Welcome" Style="{StaticResource AnalysisLabel}"/>
     </Grid>
 </UserControl>

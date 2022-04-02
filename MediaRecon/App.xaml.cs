@@ -47,11 +47,13 @@ namespace MediaRecon
             services.AddSingleton<SetupView, SetupView>();
             services.AddSingleton<AnalysisView, AnalysisView>();
             services.AddSingleton<ReviewView, ReviewView>();
+            services.AddSingleton<SaveView, SaveView>();
 
             services.AddTransient<WelcomeViewModel>();
             services.AddTransient<SetupViewModel>();
             services.AddTransient<AnalysisViewModel>();
             services.AddTransient<ReviewViewModel>();
+            services.AddTransient<SaveViewModel>();
 
             return services.BuildServiceProvider();
         }

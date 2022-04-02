@@ -19,6 +19,8 @@
                 <Setter Property="FontFamily" Value="Arial Rounded MT Bold"/>
                 <Setter Property="FontSize" Value="16"/>
             </Style>
+
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

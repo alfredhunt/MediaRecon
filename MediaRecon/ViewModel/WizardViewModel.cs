@@ -14,7 +14,6 @@ namespace ApexBytez.MediaRecon.ViewModel
         public WizardViewModel()
         {
             this.SharedContext = new Dictionary<string, object>();
-            this.SharedContext["In"] = 88;
         }
 
         public Dictionary<string, object> SharedContext { get; }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Toolkit.Mvvm.Input;
+﻿
+using Microsoft.Toolkit.Mvvm.Input;
 using MvvmWizard.Classes;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Windows.Input;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
-    internal class AnalysisViewModel : StepViewModelBase
+    internal class SaveViewModel : StepViewModelBase
     {
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
         {
@@ -21,12 +22,12 @@ namespace ApexBytez.MediaRecon.ViewModel
                 // Moving back
                 if (Analysis.Running)
                 {
-                    try 
+                    try
                     {
                         Analysis.Cancel();
                     }
                     catch (Exception ex)
-                    { 
+                    {
                         Debug.WriteLine(ex);
                     }
                 }
@@ -52,22 +53,22 @@ namespace ApexBytez.MediaRecon.ViewModel
             if (transitionContext.TransitToStep > transitionContext.TransitedFromStep)
             {
                 // Forward transition, do Analysis if setup has changed
-                
+
                 // Start the analysis...
-                Task.Run(() => RunAnalysis());
+                Task.Run(() => SaveResults());
 
             }
 
             return base.OnTransitedTo(transitionContext);
         }
 
-        private async void RunAnalysis()
+        private async void SaveResults()
         {
             // Has the analsis already ran? Don't run it again unless the configuration changes
             ForwardButtonIsEnabled = false;
             try
             {
-                await Analysis.RunAnalysisAsync();
+                await Analysis.SaveResultsAsync();
             }
             catch (Exception ex)
             {
@@ -79,8 +80,10 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         private Analysis? analysis;
         public bool forwardButtonIsEnabled;
-   
+
         public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
         public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
     }
 }
+
+
