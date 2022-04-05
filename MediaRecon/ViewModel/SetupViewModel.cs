@@ -52,7 +52,7 @@ namespace ApexBytez.MediaRecon.ViewModel
 
                 Analysis.SourceFolders.Add(@"F:\Pictures\Wedding");
                 Analysis.SourceFolders.Add(@"F:\Pictures\OurWedding");
-                Analysis.DestinationDirectory = @"F:\";
+                Analysis.DestinationDirectory = @"F:\TestResults";
             }
 
             // Load data here
@@ -88,10 +88,10 @@ namespace ApexBytez.MediaRecon.ViewModel
         public ICommand AddSourceFolderCommand => addSourceFolderCommand ??= new RelayCommand(ExecuteAddSourceFolderCommand);
         public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
 
-        private RelayCommand selectedDestinationDirectoryCommand;
-        public ICommand SelectedDestinationDirectoryCommand => selectedDestinationDirectoryCommand ??= new RelayCommand(SelectedDestinationDirectory);
+        private RelayCommand selectReconciliationFolderCommand;
+        public ICommand SelectReconciliationFolderCommand => selectReconciliationFolderCommand ??= new RelayCommand(SelectedReconciliationFolder);
 
-        private void SelectedDestinationDirectory()
+        private void SelectedReconciliationFolder()
         {
             CommonOpenFileDialog dialog = new CommonOpenFileDialog();
             // TODO: remember last directory viewed.

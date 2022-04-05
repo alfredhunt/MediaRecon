@@ -5,37 +5,64 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ApexBytez.MediaRecon.View" 
              xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" 
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              d:DataContext="{d:DesignInstance Type=viewmodel:SetupViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <DockPanel Grid.Column="0" >
-        
 
-        <GroupBox Header="Setup and Configuration" Margin="2" 
-                  DockPanel.Dock="Top">
-            <StackPanel>
-                <CheckBox Content="Sort by Date" Margin="3" IsChecked="{Binding Analysis.SortByDate}"/>
-                <Label Content="Destination folder"/>
+    <DockPanel>
+        <GroupBox Header="Analysis" DockPanel.Dock="Top">
+            <StackPanel Margin="5,0">
+                <StackPanel Orientation="Horizontal" Margin="3">
+                    <Label Content="How should duplicates be handled?"/>
+                    <RadioButton Content="Move to recycle bin" 
+                              IsChecked="{Binding Analysis.Recycle}"/>
+                    <RadioButton Content="Delete them" 
+                              IsChecked="{Binding Analysis.Delete}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="3">
+                    <Label Content="Should we move or copy unique files to the reconciliation folder?"/>
+                    <RadioButton Content="Move them" 
+                              IsChecked="{Binding Analysis.Move}"/>
+                    <RadioButton Content="Copy them" 
+                              IsChecked="{Binding Analysis.Copy}"/>
+                </StackPanel>
+
+
+                <StackPanel Orientation="Horizontal" Margin="3">
+                    <Label Content="Should we sort the results by year and month?"/>
+                    <RadioButton Content="Seems like a good way to go" 
+                              IsChecked="{Binding Analysis.Sort}"/>
+                    <RadioButton Content="I want all my files in one folder" 
+                              IsChecked="{Binding Analysis.List}"/>
+                </StackPanel>
+
+
+                <StackPanel Orientation="Horizontal" Margin="3">
+                    <Label Content="Ready to free up some space and organize your media?"/>
+                    <RadioButton Content="Lets do it!" GroupName="DryRun"
+                              IsChecked="{Binding Analysis.RunHard}"/>
+                    <RadioButton Content="Show me how it works with a dry run" GroupName="DryRun"
+                              IsChecked="{Binding Analysis.DryRun}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="3">
+                    <Label Content="Where should we save the reconciled data to?"/>
+                    <Button Content="Choose Destination Folder" Margin="5,0"
+                        Command="{Binding SelectDestinationCommand}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="3">
+                    <Label Content="What folders are we analyzing?"/>
+                    <Button Content="Add Folder" Margin="5,0"
+                        Command="{Binding SelectDestinationCommand}"/>
+                </StackPanel>
+
             </StackPanel>
         </GroupBox>
-
-        <GroupBox Header="Destination Folder" Margin="2" 
-                  DockPanel.Dock="Top">
-            <StackPanel Orientation="Horizontal">
-                <Label Content="Destination:"/>
-                <TextBlock Text="{Binding Analysis.DestinationDirectory}"/>
-            </StackPanel>
-        </GroupBox>
-        <Button Content="Set Destination Folder" Margin="3"
-                DockPanel.Dock="Top"
-                Command="{Binding SelectedDestinationDirectory}"/>
-        
-
-        <Button Content="Add Source Folder" Margin="3"
-                DockPanel.Dock="Bottom"
-                Command="{Binding AddSourceFolderCommand}"/>
-        <GroupBox Header="Source Folders" Margin="2" >
-            <ListBox x:Name="SourceListBox"
+        <GroupBox  Header="Folders" >
+            <ListBox x:Name="SourceListBox" Margin="5,0"
                          ItemsSource="{Binding Analysis.SourceFolders}" 
                          SelectedIndex="{Binding SelectedSourceFolderIndex}" 
                          AllowDrop="True"
@@ -50,6 +77,29 @@
                 </ListBox.ContextMenu>
             </ListBox>
         </GroupBox>
+
+
+
+
+        <!--<Button Content="Add Source Folder"
+                DockPanel.Dock="Bottom"
+                Command="{Binding AddSourceFolderCommand}"/>
+        <GroupBox Header="Source Folders">
+            <ListBox x:Name="SourceListBox"
+                         ItemsSource="{Binding Analysis.SourceFolders}" 
+                         SelectedIndex="{Binding SelectedSourceFolderIndex}" 
+                         AllowDrop="True"
+                         DragEnter="SourceListBox_DragEnter"
+                         DragOver="SourceListBox_DragOver"
+                         Drop="SourceListBox_Drop"
+                         KeyUp="SourceListBox_KeyUp">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
+        </GroupBox>-->
 
     </DockPanel>
 </UserControl>

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Data;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,7 +17,8 @@ namespace ApexBytez.MediaRecon.View
         {
             InitializeComponent();
 
-            ListView.ItemsSource = ItemsSource;
+            DataGrid.ItemsSource = ItemsSource;
+
         }
 
         public enum FolderViewStyle
@@ -63,7 +66,7 @@ namespace ApexBytez.MediaRecon.View
             var folderView = depObj as FolderView;
             if (folderView != null)
             {
-                folderView.ListView.ItemsSource = (ObservableCollection<IFolderViewItem>)e.NewValue;
+                folderView.DataGrid.ItemsSource = (ObservableCollection<IFolderViewItem>)e.NewValue;
             }
         }
 
@@ -80,53 +83,99 @@ namespace ApexBytez.MediaRecon.View
                 typeof(IFolderViewItem), 
                 typeof(FolderView));
 
-
-        private void ListViewItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void DataGrid_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is ListViewItem)
+            if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2)
             {
-                IFolderViewItem? folderItem = ((ListViewItem)sender).DataContext as IFolderViewItem;
-                if (folderItem != null)
+                DataGrid dg = sender as DataGrid;
+                IFolderViewItem folderItem = dg.SelectedItem as IFolderViewItem;
+                switch (folderItem.Type)
                 {
-                    switch (folderItem.Type)
-                    {
-                        case FolderViewItemType.Folder:
-                            // Show these items
-                            ListView.ItemsSource = ((IFolderViewFolder)folderItem).Items;
+                    case FolderViewItemType.Folder:
+                        // Show these items
+                        DataGrid.ItemsSource = ((IFolderViewFolder)folderItem).Items;
 
-                            //foreach (var item in ((IFolderViewFolder)folderItem).Items)
-                            //{
-                            //    ListView.Items.Add(item);
-                            //}
+                        //foreach (var item in ((IFolderViewFolder)folderItem).Items)
+                        //{
+                        //    ListView.Items.Add(item);
+                        //}
 
-                            
-                            break;
-                        case FolderViewItemType.File:
-                            try
-                            {
-                                //System.Diagnostics.Process.Start(folderItem.Path);
-                                System.Diagnostics.Process photoViewer = new System.Diagnostics.Process();
-                                photoViewer.StartInfo.FileName = @"explorer.exe";
-                                photoViewer.StartInfo.Arguments = folderItem.FullName;
-                                photoViewer.Start();
-                            }
-                            catch (System.ComponentModel.Win32Exception noBrowser)
-                            {
-                                if (noBrowser.ErrorCode == -2147467259)
-                                    MessageBox.Show(noBrowser.Message);
-                            }
-                            catch (System.Exception other)
-                            {
-                                MessageBox.Show(other.Message);
-                            }
-                            break;
-                        default:
-                            System.Diagnostics.Debug.Assert(false);
-                            break;
-                    }
+
+                        break;
+                    case FolderViewItemType.File:
+                        try
+                        {
+                            //System.Diagnostics.Process.Start(folderItem.Path);
+                            System.Diagnostics.Process photoViewer = new System.Diagnostics.Process();
+                            photoViewer.StartInfo.FileName = @"explorer.exe";
+                            photoViewer.StartInfo.Arguments = folderItem.FullName;
+                            photoViewer.Start();
+                        }
+                        catch (System.ComponentModel.Win32Exception noBrowser)
+                        {
+                            if (noBrowser.ErrorCode == -2147467259)
+                                MessageBox.Show(noBrowser.Message);
+                        }
+                        catch (System.Exception other)
+                        {
+                            MessageBox.Show(other.Message);
+                        }
+                        break;
+                    default:
+                        System.Diagnostics.Debug.Assert(false);
+                        break;
                 }
+
             }
-        }
+            }
+
+
+        //private void ListViewItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        //{
+        //    if (sender is ListViewItem)
+        //    {
+        //        IFolderViewItem? folderItem = ((ListViewItem)sender).DataContext as IFolderViewItem;
+        //        if (folderItem != null)
+        //        {
+        //            switch (folderItem.Type)
+        //            {
+        //                case FolderViewItemType.Folder:
+        //                    // Show these items
+        //                    ListView.ItemsSource = ((IFolderViewFolder)folderItem).Items;
+
+        //                    //foreach (var item in ((IFolderViewFolder)folderItem).Items)
+        //                    //{
+        //                    //    ListView.Items.Add(item);
+        //                    //}
+
+
+        //                    break;
+        //                case FolderViewItemType.File:
+        //                    try
+        //                    {
+        //                        //System.Diagnostics.Process.Start(folderItem.Path);
+        //                        System.Diagnostics.Process photoViewer = new System.Diagnostics.Process();
+        //                        photoViewer.StartInfo.FileName = @"explorer.exe";
+        //                        photoViewer.StartInfo.Arguments = folderItem.FullName;
+        //                        photoViewer.Start();
+        //                    }
+        //                    catch (System.ComponentModel.Win32Exception noBrowser)
+        //                    {
+        //                        if (noBrowser.ErrorCode == -2147467259)
+        //                            MessageBox.Show(noBrowser.Message);
+        //                    }
+        //                    catch (System.Exception other)
+        //                    {
+        //                        MessageBox.Show(other.Message);
+        //                    }
+        //                    break;
+        //                default:
+        //                    System.Diagnostics.Debug.Assert(false);
+        //                    break;
+        //            }
+        //        }
+        //    }
+        //}
 
     }
     public enum FolderViewItemType

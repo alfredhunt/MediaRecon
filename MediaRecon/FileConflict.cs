@@ -88,7 +88,9 @@ namespace ApexBytez.MediaRecon
         public string FullName { get; protected set; }
         public DateTime LastWriteTime { get; protected set; }
         public FolderViewItemType Type { get { return FolderViewItemType.File; } }
-        public long Size { get; protected set; }        
+        public long Size { get; protected set; }
+        public string ReconciliationDirectory { get; internal set; }
+        public string ReconciledFilePath { get { return Path.Combine(ReconciliationDirectory, Name); } }
 
         public ReconciledFile(ReconType type) : base(type) 
         {

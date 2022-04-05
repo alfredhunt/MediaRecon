@@ -1,0 +1,75 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+                    xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" 
+                    xmlns:mahConverters="http://metro.mahapps.com/winfx/xaml/shared">
+    
+    <mahConverters:ThicknessBindingConverter x:Key="ThicknessBindingConverter" />
+    <mahConverters:CornerRadiusBindingConverter x:Key="CornerRadiusBindingConverter" />
+
+    <Thickness x:Key="GroupBoxHeaderThemePadding">4</Thickness>
+    
+    <Style x:Key="{x:Type GroupBox}" BasedOn="{StaticResource MahApps.Styles.GroupBox}" TargetType="{x:Type GroupBox}" >
+        <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent2}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Margin" Value="5" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="mah:ControlsHelper.ContentCharacterCasing" Value="{DynamicResource MahApps.CharacterCasing.GroupBox}" />
+        <Setter Property="mah:HeaderedControlHelper.HeaderBackground" Value="{DynamicResource MahApps.Brushes.Accent3}" />
+        <Setter Property="mah:HeaderedControlHelper.HeaderFontSize" Value="{DynamicResource MahApps.Font.Size.HeaderedContent}" />
+        <Setter Property="mah:HeaderedControlHelper.HeaderForeground" Value="{x:Null}" />
+        <Setter Property="mah:HeaderedControlHelper.HeaderMargin" Value="{DynamicResource GroupBoxHeaderThemePadding}" />
+        <Setter Property="mah:HeaderedControlHelper.HeaderFontFamily" Value="{DynamicResource MahApps.Fonts.Family.Header}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type GroupBox}">
+                    <Grid x:Name="GroupBoxRoot">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <mah:ContentControlEx x:Name="HeaderContent"
+                                                  Margin="{TemplateBinding mah:HeaderedControlHelper.HeaderMargin}"
+                                                  HorizontalAlignment="{TemplateBinding mah:HeaderedControlHelper.HeaderHorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding mah:HeaderedControlHelper.HeaderVerticalContentAlignment}"
+                                                  Content="{TemplateBinding Header}"
+                                                  ContentCharacterCasing="{TemplateBinding mah:ControlsHelper.ContentCharacterCasing}"
+                                                  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                                                  ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                                  FontFamily="{TemplateBinding mah:HeaderedControlHelper.HeaderFontFamily}"
+                                                  FontSize="{TemplateBinding mah:HeaderedControlHelper.HeaderFontSize}"
+                                                  FontStretch="{TemplateBinding mah:HeaderedControlHelper.HeaderFontStretch}"
+                                                  FontWeight="{TemplateBinding mah:HeaderedControlHelper.HeaderFontWeight}"
+                                                  RecognizesAccessKey="{TemplateBinding mah:ControlsHelper.RecognizesAccessKey}"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                  UseLayoutRounding="False">
+                            <TextElement.Foreground>
+                                <MultiBinding Converter="{x:Static mahConverters:BackgroundToForegroundConverter.Instance}">
+                                    <Binding Mode="OneWay"
+                                                 Path="(mah:HeaderedControlHelper.HeaderBackground)"
+                                                 RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Mode="OneWay"
+                                                 Path="(mah:HeaderedControlHelper.HeaderForeground)"
+                                                 RelativeSource="{RelativeSource TemplatedParent}" />
+                                </MultiBinding>
+                            </TextElement.Foreground>
+                        </mah:ContentControlEx>
+                        
+                        <Rectangle Grid.Row="1" Fill="{DynamicResource MahApps.Brushes.Accent3}" Height="4" Margin="3,0"/>
+
+                        <ContentPresenter Grid.Row="2" Margin="{TemplateBinding Padding}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              Cursor="{TemplateBinding Cursor}"
+                                              UseLayoutRounding="False" />
+                        
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        
+    </Style>
+</ResourceDictionary>

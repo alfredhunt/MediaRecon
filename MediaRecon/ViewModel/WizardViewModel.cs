@@ -1,4 +1,5 @@
 ﻿using MediaRecon;
+using Microsoft.Toolkit.Mvvm.Input;
 using MvvmWizard.Classes;
 using System;
 using System.Collections.Generic;
@@ -18,5 +19,12 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         public Dictionary<string, object> SharedContext { get; }
 
+        private RelayCommand closeCommand;
+        public RelayCommand CloseCommand => closeCommand ??= new RelayCommand(Close);
+
+        private void Close()
+        {
+            
+        }
     }
 }

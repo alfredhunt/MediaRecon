@@ -1,5 +1,4 @@
-﻿using MediaRecon;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,16 +10,17 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace ApexBytez.MediaRecon
+namespace ApexBytez.MediaRecon.View
 {
     /// <summary>
-    /// Interaction logic for WizardMainWindow.xaml
+    /// Interaction logic for WizardView.xaml
     /// </summary>
-    public partial class WizardMainWindow : MahApps.Metro.Controls.MetroWindow
+    public partial class WizardView : UserControl
     {
-        public WizardMainWindow()
+        public WizardView()
         {
             InitializeComponent();
         }

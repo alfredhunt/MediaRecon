@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
-    <ListView x:Name="ListView" >
+    <!--<ListView x:Name="ListView" >
         <ListView.ItemsPanel>
             <ItemsPanelTemplate>
                 <VirtualizingStackPanel Orientation="Vertical"/>
@@ -15,9 +15,9 @@
         </ListView.ItemsPanel>
         <ListView.View>
             <GridView>
-                <GridViewColumn Header="Name" Width="200"
+                <GridViewColumn Header="Name" Width="250"
                                 DisplayMemberBinding="{Binding Name}" />
-                <GridViewColumn Header="Date Modified" Width="150"
+                <GridViewColumn Header="Date Modified" Width="200"
                                 DisplayMemberBinding="{Binding LastWriteTime}" />
                 <GridViewColumn Header="Type" Width="75"
                                 DisplayMemberBinding="{Binding Type}" />
@@ -30,5 +30,19 @@
                 <EventSetter Event="MouseDoubleClick" Handler="ListViewItem_MouseDoubleClick"/>
             </Style>
         </ListView.ItemContainerStyle>
-    </ListView>
+    </ListView>-->
+    <DataGrid x:Name="DataGrid" AutoGenerateColumns="False" SelectionMode="Single"
+              MouseDown="DataGrid_MouseDown">
+        <DataGrid.Columns>
+            <DataGridTextColumn Header="Name" Binding ="{Binding Name}" IsReadOnly="True"
+                                Width="200"/>
+            <DataGridTextColumn Header="Date Modified" Binding ="{Binding LastWriteTime}" IsReadOnly="True"
+                                Width="200"/>
+            <DataGridTextColumn Header="Type" Binding ="{Binding Type}" IsReadOnly="True"
+                                Width="75"/>
+            <DataGridTextColumn Header="Size" Binding ="{Binding Size, Converter={converters:FileSizeFormatConverter}}" 
+                                IsReadOnly="True"
+                                Width="125"/>
+        </DataGrid.Columns>
+    </DataGrid>
 </UserControl>

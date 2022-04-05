@@ -9,6 +9,8 @@
              d:DataContext="{d:DesignInstance Type=viewmodel:AnalysisViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+
+    
     <DockPanel DataContext="{Binding Analysis}">
         <GroupBox Header="Analysis" DockPanel.Dock="Top">
             <Grid>
@@ -30,45 +32,48 @@
                 </Grid.ColumnDefinitions>
 
 
-                <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource AnalysisLabel}" Content="Files"/>
-                <Label Grid.Row="1" Grid.Column="1" Style="{StaticResource AnalysisLabel}" Content="{Binding FileCount}"/>
-                <Label Grid.Row="2" Grid.Column="0" Style="{StaticResource AnalysisLabel}" Content="Size on Disk"/>
-                <Label Grid.Row="2" Grid.Column="1" Style="{StaticResource AnalysisLabel}" Content="{Binding SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
+                <Label Grid.Row="1" Grid.Column="0" Content="Files"/>
+                <Label Grid.Row="1" Grid.Column="1" Content="{Binding FileCount}"/>
+                <Label Grid.Row="2" Grid.Column="0" Content="Size on Disk"/>
+                <Label Grid.Row="2" Grid.Column="1" Content="{Binding SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
 
 
-                <Label Grid.Row="1" Grid.Column="2" Style="{StaticResource AnalysisLabel}" Content="Files Analyzed"/>
-                <Label Grid.Row="1" Grid.Column="3" Style="{StaticResource AnalysisLabel}" Content="{Binding NumberOfFiles}"/>
-                <Label Grid.Row="2" Grid.Column="2" Style="{StaticResource AnalysisLabel}" Content="Data Analyzed"/>
-                <Label Grid.Row="2" Grid.Column="3" Style="{StaticResource AnalysisLabel}" Content="{Binding TotalSize, Converter={converters:FileSizeFormatConverter}}" />
+                <Label Grid.Row="1" Grid.Column="2" Content="Files Analyzed"/>
+                <Label Grid.Row="1" Grid.Column="3" Content="{Binding NumberOfFiles}"/>
+                <Label Grid.Row="2" Grid.Column="2" Content="Data Analyzed"/>
+                <Label Grid.Row="2" Grid.Column="3" Content="{Binding TotalSize, Converter={converters:FileSizeFormatConverter}}" />
 
-                <Label Grid.Row="3" Grid.Column="0" Style="{StaticResource AnalysisLabel}" Content="Analysis Time"/>
-                <Label Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource AnalysisLabel}" Content="{Binding AnalysisTime}"/>
+                <Label Grid.Row="3" Grid.Column="0" Content="Analysis Time"/>
+                <Label Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Content="{Binding AnalysisTime}"/>
 
-                <Label Grid.Row="1" Grid.Column="4" Style="{StaticResource AnalysisLabel}" Content="Duplicates"/>
-                <Label Grid.Row="1" Grid.Column="5" Style="{StaticResource AnalysisLabel}" Content="{Binding DuplicateCount}"/>
-                <Label Grid.Row="2" Grid.Column="4" Style="{StaticResource AnalysisLabel}" Content="Size on Disk"/>
-                <Label Grid.Row="2" Grid.Column="5" Style="{StaticResource AnalysisLabel}" Content="{Binding DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
+                <Label Grid.Row="1" Grid.Column="4" Content="Duplicates"/>
+                <Label Grid.Row="1" Grid.Column="5" Content="{Binding DuplicateCount}"/>
+                <Label Grid.Row="2" Grid.Column="4" Content="Size on Disk"/>
+                <Label Grid.Row="2" Grid.Column="5" Content="{Binding DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
 
-                <Label Grid.Row="1" Grid.Column="6" Style="{StaticResource AnalysisLabel}" Content="Distinct"/>
-                <Label Grid.Row="1" Grid.Column="7" Style="{StaticResource AnalysisLabel}" Content="{Binding DistinctCount}"/>
-                <Label Grid.Row="2" Grid.Column="6" Style="{StaticResource AnalysisLabel}" Content="Size on Disk"/>
-                <Label Grid.Row="2" Grid.Column="7" Style="{StaticResource AnalysisLabel}" Content="{Binding DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
+                <Label Grid.Row="1" Grid.Column="6" Content="Distinct"/>
+                <Label Grid.Row="1" Grid.Column="7" Content="{Binding DistinctCount}"/>
+                <Label Grid.Row="2" Grid.Column="6" Content="Size on Disk"/>
+                <Label Grid.Row="2" Grid.Column="7" Content="{Binding DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
 
                 <mah:MetroProgressBar Grid.Row="3" Grid.Column="3" Grid.ColumnSpan="4" 
                                       Margin="5"
                                       Value="{Binding ProgressBarValue}"
                                       Maximum="{Binding ProgressBarMaximum}"/>
-                
-                <Button Grid.Row="3" Grid.Column="7" 
-                        Content="{Binding CancelCommandContent}"
+
+                <Button Grid.Row="3" Grid.Column="7" Content="Cancel" 
+                        Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
                         Command="{Binding CancelCommand}" />
+                <Label Grid.Row="3" Grid.Column="7" Content="{Binding ResultsLabel}" 
+                       Visibility="{Binding ShowResultsLabel, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </Grid>
         </GroupBox>
 
-        <GroupBox Header="Reconciled Data" Margin="2">
+        <GroupBox Header="Reconciled Data" >
             <local:FolderView ItemsSource="{Binding ReconciledDirectories}" ViewStyle="List"/>
         </GroupBox>
 
+        <!--<local:Section Header="Content"/>-->
 
     </DockPanel>
 </UserControl>

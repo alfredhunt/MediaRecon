@@ -54,8 +54,11 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         public ObservableCollection<ConflictedFiles> RenamedFiles { get => renamedFiles; set => SetProperty(ref renamedFiles, value); }
 
-        private ObservableCollection<string> saveResultsLog = new ObservableCollection<string>();
-        public ObservableCollection<string> SaveResultsLog { get => saveResultsLog; set => SetProperty(ref saveResultsLog, value); }
+        private ObservableCollection<string> removedItems = new ObservableCollection<string>();
+        public ObservableCollection<string> RemovedItems { get => removedItems; set => SetProperty(ref removedItems, value); }
+
+        private ObservableCollection<string> savedItems = new ObservableCollection<string>();
+        public ObservableCollection<string> SavedItems { get => savedItems; set => SetProperty(ref savedItems, value); }
 
         public long FolderCount { get => folderCount; set => SetProperty(ref folderCount, value); }
         public long FileCount { get => fileCount; set => SetProperty(ref fileCount, value); }
@@ -75,32 +78,38 @@ namespace ApexBytez.MediaRecon.ViewModel
         private RelayCommand cancelCommand;
         private CancellationTokenSource cancellationTokenSource;
         private CancellationToken cancellationToken;
-        public RelayCommand CancelCommand => cancelCommand ??= new RelayCommand(Cancel, CanCancel);
-        private string cancelCommandContent = "Cancel";
-        public string CancelCommandContent { get => cancelCommandContent; set => SetProperty(ref cancelCommandContent, value); }
+        public RelayCommand CancelCommand => cancelCommand ??= new RelayCommand(Cancel, CanExecuteCancel);
+
+        private Subject<ReconciledFile> subject;
+        private IDisposable subjectDisposable;
+
+        public List<ReconciledFile> ReconciledFiles { get; private set; } = new List<ReconciledFile>();
 
         public void Cancel()
         {
             cancellationTokenSource.Cancel();
         }
 
-        public bool CanCancel()
+        public bool CanExecuteCancel()
         {
-            return Running &&
+            return CanCancel = Running &&
                 cancellationTokenSource != null &&
                 !cancellationTokenSource.IsCancellationRequested;
         }
 
-        public async Task SaveResultsAsync()
+        private async Task Run(Func<Task> asyncTask)
         {
-            // TODO: Refactor Setup/Teardown on these async methods
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
+            ProgressBarValue = 0;
+            ProgressBarMaximum = 100;
             Running = true;
+
             Application.Current.Dispatcher.Invoke(() =>
             {
                 CancelCommand.NotifyCanExecuteChanged();
             });
+
             TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
             var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
                 .TimeInterval()
@@ -112,15 +121,54 @@ namespace ApexBytez.MediaRecon.ViewModel
                         AnalysisTime = elapsedTime;
                     });
                 });
-            // TODO: Refactor Setup/Teardown on these async methods
 
+            try
+            {
+                await asyncTask();
+                ResultsLabel = "Done!";
+            }
+            catch (OperationCanceledException ex)
+            {
+                Debug.WriteLine(ex.Message);
+                ResultsLabel = "Cancelled";
+            }
+            finally
+            {
+                observableTimer.Dispose();
+            }
+
+            // TODO: probably need to work on the statefulness of this processing and the UI elements
+            //  visibility.
+            Running = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CancelCommand.NotifyCanExecuteChanged();
+            });
+            Debug.Assert(!CanCancel);
+            CanCancel = false;
+            ShowResultsLabel = true;
+        }
+
+        public async Task SaveResultsAsync()
+        {
+            await Run(ProcessResultsAsync);
+        }
+        public async Task RunAnalysisAsync()
+        {
+            await Run(PerformAnalysisAsync);
+        }
+
+        private async Task ProcessResultsAsync()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                RemovedItems.Clear();
+            });
             string formatFolderExist = "Directory Exists: {0}";
             string formatFolderCreated = "Created Directory: {0}";
             string logMessage = string.Empty;
             try
             {
-                
-
                 // Would possible be best if we could created all the directories first then really use
                 //  the power of parallel processing on the files in a flat list
                 if (SortByDate)
@@ -131,10 +179,16 @@ namespace ApexBytez.MediaRecon.ViewModel
                     {
                         var yearDir = Path.Combine(DestinationDirectory, year.Name);
                         var yearDirExist = Directory.Exists(yearDir);
+
+                        if (!yearDirExist)
+                        {
+                            Directory.CreateDirectory(yearDir);
+                        }
+
                         logMessage = string.Format(yearDirExist ? formatFolderExist : formatFolderCreated, yearDir);
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            SaveResultsLog.Add(logMessage);
+                            SavedItems.Add(logMessage);
                         });
 
 
@@ -145,90 +199,140 @@ namespace ApexBytez.MediaRecon.ViewModel
                         {
                             var monthDir = Path.Combine(yearDir, month.Name);
                             var monthDirExist = Directory.Exists(monthDir);
+
+                            if (!monthDirExist)
+                            {
+                                Directory.CreateDirectory(monthDir);
+                            }
+
                             logMessage = string.Format(monthDirExist ? formatFolderExist : formatFolderCreated, monthDir);
                             Application.Current.Dispatcher.Invoke(() =>
                             {
-                                SaveResultsLog.Add(logMessage);
+                                SavedItems.Add(logMessage);
                             });
-
                         }
                     }
                 }
 
-                // TODO:  Need to figure this out...
+                // Can we use FileInfo here? for things that are saved we can get updated, delete we use old
+                // and we can also pass some status to show saved/delete...  Might work
+                subject = new Subject<ReconciledFile>();
+                subjectDisposable = subject.Buffer(TimeSpan.FromMilliseconds(24))
+                    .Where(x => x.Count > 0)
+                    .Subscribe(x =>
+                    {
 
-                // I want parallel to run on a flat flist, not the nested structure I have in ReconciledDirectories
+                        long filesProcessed = ReconStats.FilesProcessed;
+                        long dataProcessed = ReconStats.DataProcessed;
+                        long duplicatesDeleted = ReconStats.DuplicatesDeleted;
+                        long duplicateData = ReconStats.DuplicateData;
+                        long distinctSaved = ReconStats.DistinctSaved;
+                        long distinctData = ReconStats.DistinctData;
 
-                // Don't try and recurse ReconciledDirectories.  Instead lets give the reconciled files a ReconciledPath
-                //  which will be a combination of the reconciled directories plus the configured destination directory
-                // Actually, we'll need to created the directories as well so I'm not 100% sure which is best.
+                        foreach (var file in x)
+                        {
+                            switch (file.ReconType)
+                            {
+                                case ReconType.Distinct:
+                                    filesProcessed++;
+                                    dataProcessed += file.Size;
 
+                                    break;
+                                case ReconType.Duplicate:
+                                    var duplicate = file as DuplicateFiles;
+                                    filesProcessed += duplicate.TotalFileCount;
+                                    dataProcessed += duplicate.TotalFileSystemSize;
+                                    duplicatesDeleted += duplicate.NumberOfDuplicateFiles;
+                                    duplicateData += duplicate.DuplicateFileSystemSize;
+                                    distinctSaved += duplicate.NumberOfDistinctFiles;
+                                    distinctData += duplicate.Size;
+                                    break;
+                                default:
+                                    Debug.Assert(false);
+                                    break;
+                            }
+                        }
 
-                //await Parallel.ForEachAsync(reconciledFiles,
-                //    new ParallelOptions { MaxDegreeOfParallelism = 16, CancellationToken = cancellationToken },
-                //    async (file, ct) =>
-                //    {
-                //        switch (file.ReconType)
-                //        {
-                //            case ReconType.Distinct:
-                //                //logMessage = string.Format("Saving: {0}",);
+                        var progressBarValue = ((double)ReconStats.FilesProcessed / FileCount) * 100;
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            ReconStats.FilesProcessed = filesProcessed;
+                            ReconStats.DataProcessed = dataProcessed;
+                            ReconStats.DuplicatesDeleted = duplicatesDeleted;
+                            ReconStats.DuplicateData = duplicateData;
+                            ReconStats.DistinctSaved = distinctSaved;
+                            ReconStats.DistinctData = distinctData;
+                            ProgressBarValue = progressBarValue;
+                        });
+                    });
 
-                //                break;
-                //            case ReconType.Duplicate:
-                //                break;
-                //        }
-                //    });
+                await Parallel.ForEachAsync(ReconciledFiles,
+                      new ParallelOptions { MaxDegreeOfParallelism = 64, CancellationToken = cancellationToken },
+                      async (file, ct) =>
+                      {
+                        // I want to do the work of copy/moving/deleting here...
+                        //  BUT... we cant update UI all willy nilly here. We need to maybe use another observable subject
+                        //  to streamline the events and update stats just like in the main analysis block
+                        string message = string.Empty;
+
+                          try
+                          {
+                              File.Copy(file.FullName, file.ReconciledFilePath, false);
+                              message = string.Format("Moved {0} from {1} to {2}",
+                                  file.Name,
+                                  file.FullName,
+                                  file.ReconciledFilePath);
+                              Application.Current.Dispatcher.Invoke(() =>
+                              {
+                                  SavedItems.Add(message);
+                              });
+                          }
+                          catch (Exception ex)
+                          {
+                              Debug.WriteLine(ex.ToString());
+                          }
+                          
+
+                          switch (file.ReconType)
+                          {
+                              case ReconType.Distinct:
+
+                                  break;
+                              case ReconType.Duplicate:
+                                  var duplicate = file as DuplicateFiles;
+                                  try
+                                  {
+                                      foreach (var item in duplicate.Files.Skip(1))
+                                      {
+                                          FileOperationAPIWrapper.MoveToRecycleBin(item.FullName);
+                                      }
+                                      message = string.Format("Removing {0} duplicate(s) of {1}",
+                                          duplicate.NumberOfDuplicateFiles,
+                                          duplicate.Name);
+                                      Application.Current.Dispatcher.Invoke(() =>
+                                      {
+                                          RemovedItems.Add(message);
+                                      });
+                                  }
+                                  catch (Exception ex)
+                                  {
+                                      Debug.WriteLine(ex.ToString());
+                                  }
+                                  break;
+                          }
+
+                          subject.OnNext(file);
+                      });
             }
             catch (OperationCanceledException ex)
             {
                 Debug.WriteLine(ex.Message);
             }
-            finally
-            {
-                observableTimer.Dispose();
-            }
-
-
-            // TODO: Refactor Setup/Teardown on these async methods
-            Running = false;
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                CancelCommand.NotifyCanExecuteChanged();
-            });
-            CancelCommandContent = "Done";
-            // TODO: Refactor Setup/Teardown on these async methods
         }
 
-
-        private void ResetAnlysis()
-        {
-            FolderCount = 0;
-            FileCount = 0;
-            SourceFoldersSize = 0;
-            NumberOfFiles = 0;
-            TotalSize = 0;
-            DuplicateCount = 0;
-            DuplicateSize = 0;
-            DistinctCount = 0;
-            DistinctSize = 0;
-            ProgressBarValue = 0;
-            ProgressBarMaximum = 100;
-            AnalysisTime = TimeSpan.Zero;
-            Running = false;
-        }
-
-        public async Task RunAnalysisAsync()
+        private async Task PerformAnalysisAsync()
         {
             ResetAnlysis();
-
-            cancellationTokenSource = new CancellationTokenSource();
-            cancellationToken = cancellationTokenSource.Token;
-            Running = true;
-
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                CancelCommand.NotifyCanExecuteChanged();
-            });
 
             FolderCount = SourceFolders.Count();
 
@@ -236,19 +340,6 @@ namespace ApexBytez.MediaRecon.ViewModel
             var sortedFiles = FileAnalysis.GetSortedFileInfo(SourceFolders);
             FileCount = sortedFiles.Sum(x => x.Value.Count);
             SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
-
-            TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
-
-            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
-                .TimeInterval()
-                .Subscribe(x =>
-                {
-                    elapsedTime = elapsedTime.Add(x.Interval);
-                    Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        AnalysisTime = elapsedTime;
-                    });
-                });
 
             _conflictResolutions = new Subject<ConflictedFiles>();
             resolutionDisposable = _conflictResolutions
@@ -351,23 +442,30 @@ namespace ApexBytez.MediaRecon.ViewModel
             {
                 Debug.WriteLine(ex.Message);
             }
-            finally
-            {
-                observableTimer.Dispose();
-            }
-
-            Running = false;
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                CancelCommand.NotifyCanExecuteChanged();
-            });
-            CancelCommandContent = "Done";
+        }
+        private void ResetAnlysis()
+        {
+            FolderCount = 0;
+            FileCount = 0;
+            SourceFoldersSize = 0;
+            NumberOfFiles = 0;
+            TotalSize = 0;
+            DuplicateCount = 0;
+            DuplicateSize = 0;
+            DistinctCount = 0;
+            DistinctSize = 0;
+            ProgressBarValue = 0;
+            ProgressBarMaximum = 100;
+            AnalysisTime = TimeSpan.Zero;
         }
 
         private void InsertReconciledFile(ReconciledFile reconciled)
         {
+            ReconciledFiles.Add(reconciled);
+
             if (!sortByDate)
             {
+                reconciled.ReconciliationDirectory = DestinationDirectory;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ReconciledDirectories.Add(reconciled);
@@ -379,6 +477,8 @@ namespace ApexBytez.MediaRecon.ViewModel
                 bool isMonthNew = false;
                 var year = reconciled.LastWriteTime.Year.ToString();
                 var month = reconciled.LastWriteTime.ToString("MMMM");
+
+                reconciled.ReconciliationDirectory = Path.Combine(DestinationDirectory, year, month);
 
                 var yearDir = ReconciledDirectories.FirstOrDefault(x => x.Name.Equals(year)) as ReconciledDirectory;
                 if (yearDir == null)
@@ -463,7 +563,52 @@ namespace ApexBytez.MediaRecon.ViewModel
             return bitwiseGoupings;
         }
 
+        public ReconciliationStatistics ReconStats { get; set; } = new ReconciliationStatistics();
+
+        private bool canCancel;
+
+        public bool CanCancel { get => canCancel; set => SetProperty(ref canCancel, value); }
+
+        private bool showResultLabel;
+
+        public bool ShowResultsLabel { get => showResultLabel; set => SetProperty(ref showResultLabel, value); }
+
+        private string resultsLabel;
+
+        public string ResultsLabel { get => resultsLabel; set => SetProperty(ref resultsLabel, value); }
+
     }
+
+    class ReconciliationStatistics : ObservableObject
+    {
+        private long filesProcessed;
+
+        public long FilesProcessed { get => filesProcessed; set => SetProperty(ref filesProcessed, value); }
+
+        private long dataProcessed;
+
+        public long DataProcessed { get => dataProcessed; set => SetProperty(ref dataProcessed, value); }
+
+        private long duplicatesDeleted;
+
+        public long DuplicatesDeleted { get => duplicatesDeleted; set => SetProperty(ref duplicatesDeleted, value); }
+
+        private long duplicateData;
+
+        public long DuplicateData { get => duplicateData; set => SetProperty(ref duplicateData, value); }
+
+        private long distinctSaved;
+
+        public long DistinctSaved { get => distinctSaved; set => SetProperty(ref distinctSaved, value); }
+
+        private long distinctData;
+
+        public long DistinctData { get => distinctData; set => SetProperty(ref distinctData, value); }
+    }
+
+    class AnalysisStatistics
+    { }
+
     class ArrayComparer<T> : IEqualityComparer<T[]>
     {
         public bool Equals(T[] x, T[] y)
