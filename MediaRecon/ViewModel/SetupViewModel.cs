@@ -11,14 +11,35 @@ namespace ApexBytez.MediaRecon.ViewModel
 {
     internal class SetupViewModel : StepViewModelBase
     {
+        private AnalysisOptions analysisOptions = new AnalysisOptions();
+        private int selectedSourceFolderIndex;
+        private ICommand removeSourceFolder;
+        private ICommand addSourceFolderCommand;
+        private ICommand chooseDestinationFolderCommand;
+        private Analysis analysis;
+        public bool forwardButtonIsEnabled;
+
+        public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
+        public int SelectedSourceFolderIndex { get => selectedSourceFolderIndex; set => SetProperty(ref selectedSourceFolderIndex, value); }
+        public ICommand RemoveSourceFolder => removeSourceFolder ??= new RelayCommand(PerformRemoveSourceFolder);
+        public ICommand AddSourceFolderCommand => addSourceFolderCommand ??= new RelayCommand(ExecuteAddSourceFolderCommand);
+        public ICommand ChooseDestinationFolderCommand => chooseDestinationFolderCommand ??= new RelayCommand(SelectedReconciliationFolder);
+        public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
+        public AnalysisOptions AnalysisOptions { get => analysisOptions; set => SetProperty(ref analysisOptions, value); }
+
         public SetupViewModel()
         {
-            
+            AnalysisOptions.SourceFolders.CollectionChanged += SourceFolders_CollectionChanged;
+
+            // DEBUG
+            AnalysisOptions.SourceFolders.Add(@"F:\Pictures\Wedding");
+            AnalysisOptions.SourceFolders.Add(@"F:\Pictures\OurWedding");
+            AnalysisOptions.DestinationDirectory = @"F:\TestResults";
         }
 
         private void SourceFolders_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            ForwardButtonIsEnabled = Analysis.SourceFolders.Any();
+            ForwardButtonIsEnabled = AnalysisOptions.SourceFolders.Any();
         }
 
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
@@ -35,7 +56,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                 return;
             }
 
-            transitionContext.SharedContext["Analysis"] = Analysis;
+            transitionContext.SharedContext["AnalysisOptions"] = AnalysisOptions;
 
             // Save data here
             await Task.Delay(0);
@@ -44,15 +65,8 @@ namespace ApexBytez.MediaRecon.ViewModel
         {
             if (transitionContext.TransitToStep > transitionContext.TransitedFromStep)
             {
-                ForwardButtonIsEnabled = false;
-
-                Analysis = new Analysis();
-
-                Analysis.SourceFolders.CollectionChanged += SourceFolders_CollectionChanged;
-
-                Analysis.SourceFolders.Add(@"F:\Pictures\Wedding");
-                Analysis.SourceFolders.Add(@"F:\Pictures\OurWedding");
-                Analysis.DestinationDirectory = @"F:\TestResults";
+                // TODO: Might ultimately need to do something here, unsure.
+                // ... Possibly on some kind of clear/new operation.
             }
 
             // Load data here
@@ -60,7 +74,7 @@ namespace ApexBytez.MediaRecon.ViewModel
         }
         private void PerformRemoveSourceFolder()
         {
-            Analysis.SourceFolders.RemoveAt(SelectedSourceFolderIndex);
+            AnalysisOptions.SourceFolders.RemoveAt(SelectedSourceFolderIndex);
             SelectedSourceFolderIndex = -1;
         }
 
@@ -72,24 +86,9 @@ namespace ApexBytez.MediaRecon.ViewModel
             dialog.IsFolderPicker = true;
             if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
             {
-                Analysis.SourceFolders.Add(dialog.FileName);
+                AnalysisOptions.SourceFolders.Add(dialog.FileName);
             }
         }
-
-        private int selectedSourceFolderIndex;
-        private ICommand removeSourceFolder;
-        private ICommand addSourceFolderCommand;
-        private Analysis analysis;
-
-        public bool forwardButtonIsEnabled;
-        public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
-        public int SelectedSourceFolderIndex { get => selectedSourceFolderIndex; set => SetProperty(ref selectedSourceFolderIndex, value); }
-        public ICommand RemoveSourceFolder => removeSourceFolder ??= new RelayCommand(PerformRemoveSourceFolder);
-        public ICommand AddSourceFolderCommand => addSourceFolderCommand ??= new RelayCommand(ExecuteAddSourceFolderCommand);
-        public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
-
-        private RelayCommand selectReconciliationFolderCommand;
-        public ICommand SelectReconciliationFolderCommand => selectReconciliationFolderCommand ??= new RelayCommand(SelectedReconciliationFolder);
 
         private void SelectedReconciliationFolder()
         {
@@ -99,7 +98,7 @@ namespace ApexBytez.MediaRecon.ViewModel
             dialog.IsFolderPicker = true;
             if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
             {
-                Analysis.DestinationDirectory = dialog.FileName;
+                AnalysisOptions.DestinationDirectory = dialog.FileName;
             }
         }
     }

@@ -10,7 +10,7 @@
              d:DataContext="{d:DesignInstance Type=viewmodel:Analysis}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <DockPanel DataContext="{Binding Analysis}">
+    <DockPanel DataContext="{Binding SaveResults}">
         <GroupBox Header="Save Results"  
                   DockPanel.Dock="Top" >
             <Grid>

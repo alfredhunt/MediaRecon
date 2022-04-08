@@ -6,8 +6,14 @@
              xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-        <Label Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
-               Content="Welcome"/>
-    </Grid>
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Label HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="MediaRecon" TextWrapping="Wrap" FontSize="80"/>
+        </Label>
+        <Label HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="Organize your media and remove duplicates" TextWrapping="Wrap"/>
+        </Label>
+    </StackPanel>
+
 </UserControl>

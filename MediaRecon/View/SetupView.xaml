@@ -5,101 +5,108 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ApexBytez.MediaRecon.View" 
              xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" 
+             xmlns:analysis="clr-namespace:ApexBytez.MediaRecon.Analysis" 
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" 
              d:DataContext="{d:DesignInstance Type=viewmodel:SetupViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
-    <DockPanel>
-        <GroupBox Header="Analysis" DockPanel.Dock="Top">
-            <StackPanel Margin="5,0">
-                <StackPanel Orientation="Horizontal" Margin="3">
-                    <Label Content="How should duplicates be handled?"/>
-                    <RadioButton Content="Move to recycle bin" 
-                              IsChecked="{Binding Analysis.Recycle}"/>
-                    <RadioButton Content="Delete them" 
-                              IsChecked="{Binding Analysis.Delete}"/>
-                </StackPanel>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" Margin="3">
-                    <Label Content="Should we move or copy unique files to the reconciliation folder?"/>
-                    <RadioButton Content="Move them" 
-                              IsChecked="{Binding Analysis.Move}"/>
-                    <RadioButton Content="Copy them" 
-                              IsChecked="{Binding Analysis.Copy}"/>
-                </StackPanel>
+        <GroupBox Header="Media Sources" Grid.Column="0">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top">
+                    <Button DockPanel.Dock="Bottom" Content="Add Folder"
+                                    Command="{Binding AddSourceFolderCommand}"/>
+                    <Label Content="What folders would you like to analyze?"/>
+                </DockPanel>
+                <GroupBox Header="Folders">
+                    <ListBox x:Name="SourceListBox" Margin="5,0"
+                         ItemsSource="{Binding AnalysisOptions.SourceFolders}" 
+                         SelectedIndex="{Binding SelectedSourceFolderIndex}" 
+                         AllowDrop="True"
+                         DragEnter="SourceListBox_DragEnter"
+                         DragOver="SourceListBox_DragOver"
+                         Drop="SourceListBox_Drop"
+                         KeyUp="SourceListBox_KeyUp">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                    </ListBox>
+                </GroupBox>
+            </DockPanel>
+            
+        </GroupBox>
 
+        <StackPanel Grid.Column="1">
+            <GroupBox DockPanel.Dock="Bottom" Header="Results"  >
 
-                <StackPanel Orientation="Horizontal" Margin="3">
-                    <Label Content="Should we sort the results by year and month?"/>
-                    <RadioButton Content="Seems like a good way to go" 
-                              IsChecked="{Binding Analysis.Sort}"/>
-                    <RadioButton Content="I want all my files in one folder" 
-                              IsChecked="{Binding Analysis.List}"/>
-                </StackPanel>
-
-
-                <StackPanel Orientation="Horizontal" Margin="3">
-                    <Label Content="Ready to free up some space and organize your media?"/>
-                    <RadioButton Content="Lets do it!" GroupName="DryRun"
-                              IsChecked="{Binding Analysis.RunHard}"/>
-                    <RadioButton Content="Show me how it works with a dry run" GroupName="DryRun"
-                              IsChecked="{Binding Analysis.DryRun}"/>
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" Margin="3">
-                    <Label Content="Where should we save the reconciled data to?"/>
+                <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="3">
+                    <Label Content="Where would you like to save the results to?"/>
                     <Button Content="Choose Destination Folder" Margin="5,0"
-                        Command="{Binding SelectDestinationCommand}"/>
+                        Command="{Binding ChooseDestinationFolderCommand}"/>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" Margin="3">
-                    <Label Content="What folders are we analyzing?"/>
-                    <Button Content="Add Folder" Margin="5,0"
-                        Command="{Binding SelectDestinationCommand}"/>
+            </GroupBox>
+            <GroupBox Header="The Finer Details" Grid.Column="1" DataContext="{Binding AnalysisOptions}">
+                <StackPanel Margin="5,0" Grid.Column="1">
+                    <Label Content="Should we permanently delete duplicates files?"/>
+                    <StackPanel Orientation="Horizontal" Margin="3">
+                        <RadioButton Content="Move to recycle bin"
+                                     IsChecked="{Binding DeleteStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:DeleteStrategy.Soft}}"/>
+                        <RadioButton Content="Get rid of them" 
+                                     IsChecked="{Binding DeleteStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:DeleteStrategy.Hard}}"/>
+                    </StackPanel>
+
+                    <Label Content="Should we move or copy unique files?"/>
+                    <StackPanel Orientation="Horizontal" Margin="3">
+                        <RadioButton Content="Move them" 
+                                     IsChecked="{Binding MoveStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:MoveStrategy.Move}}"/>
+                        <RadioButton Content="Copy them" 
+                                     IsChecked="{Binding MoveStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:MoveStrategy.Copy}}"/>
+                    </StackPanel>
+
+                    <Label Content="Should we sort the results by year and month?"/>
+                    <StackPanel Orientation="Horizontal" Margin="3">
+                        <RadioButton Content="Sort results" 
+                                     IsChecked="{Binding SortingStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:SortingStrategy.YearAndMonth}}"/>
+                        <RadioButton Content="I want all my files in one folder" 
+                                     IsChecked="{Binding SortingStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:SortingStrategy.None}}"/>
+                    </StackPanel>
+
+                    <Label Content="Ready to free up some space and organize your media?"/>
+                    <StackPanel Orientation="Horizontal" Margin="3">
+                        <RadioButton Content="Lets do it!"
+                                     IsChecked="{Binding RunStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:RunStrategy.Normal}}"/>
+                        <RadioButton Content="Show me how it works with a dry run"
+                                     IsChecked="{Binding RunStrategy, 
+                            Converter={converters:EnumToBoolConverter}, 
+                            ConverterParameter={x:Static viewmodel:RunStrategy.DryRun}}"/>
+                    </StackPanel>
+                    
                 </StackPanel>
-
-            </StackPanel>
-        </GroupBox>
-        <GroupBox  Header="Folders" >
-            <ListBox x:Name="SourceListBox" Margin="5,0"
-                         ItemsSource="{Binding Analysis.SourceFolders}" 
-                         SelectedIndex="{Binding SelectedSourceFolderIndex}" 
-                         AllowDrop="True"
-                         DragEnter="SourceListBox_DragEnter"
-                         DragOver="SourceListBox_DragOver"
-                         Drop="SourceListBox_Drop"
-                         KeyUp="SourceListBox_KeyUp">
-                <ListBox.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
-                    </ContextMenu>
-                </ListBox.ContextMenu>
-            </ListBox>
-        </GroupBox>
-
-
-
-
-        <!--<Button Content="Add Source Folder"
-                DockPanel.Dock="Bottom"
-                Command="{Binding AddSourceFolderCommand}"/>
-        <GroupBox Header="Source Folders">
-            <ListBox x:Name="SourceListBox"
-                         ItemsSource="{Binding Analysis.SourceFolders}" 
-                         SelectedIndex="{Binding SelectedSourceFolderIndex}" 
-                         AllowDrop="True"
-                         DragEnter="SourceListBox_DragEnter"
-                         DragOver="SourceListBox_DragOver"
-                         Drop="SourceListBox_Drop"
-                         KeyUp="SourceListBox_KeyUp">
-                <ListBox.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
-                    </ContextMenu>
-                </ListBox.ContextMenu>
-            </ListBox>
-        </GroupBox>-->
-
-    </DockPanel>
+            </GroupBox>
+        </StackPanel>
+    </Grid>
 </UserControl>

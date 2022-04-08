@@ -30,14 +30,14 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         public override Task OnTransitedTo(TransitionContext transitionContext)
         {
-            Analysis = transitionContext.SharedContext["Analysis"] as Analysis;
+            AnalysisResults = transitionContext.SharedContext["AnalysisResults"] as AnalysisResults;
 
             // Load data here
             return base.OnTransitedTo(transitionContext);
         }
 
-        private Analysis? analysis;
-        public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
+        private AnalysisResults? analysisResults;
+        public AnalysisResults AnalysisResults { get => analysisResults; set => SetProperty(ref analysisResults, value); }
 
     }
 }

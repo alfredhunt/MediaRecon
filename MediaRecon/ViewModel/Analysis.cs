@@ -16,9 +16,61 @@ using System.Windows;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
-    internal class Analysis : ObservableObject
+    public enum DeleteStrategy
     {
-        private long folderCount;
+        Soft, // Recycle bin
+        Hard, // Hard Delete
+    }
+    public enum MoveStrategy
+    {
+        Move,
+        Copy
+    }
+    public enum SortingStrategy
+    {
+        None,
+        YearAndMonth
+    }
+    public enum RunStrategy
+    {
+        Normal,
+        DryRun
+    }
+
+    public class AnalysisOptions : ObservableObject
+    {
+        private ObservableCollection<string> sourceFolders = new ObservableCollection<string>();
+        private string destinationFolder = String.Empty;
+        private DeleteStrategy deleteStrategy;
+        private MoveStrategy moveStrategy;
+        private SortingStrategy sortingStrategy = SortingStrategy.YearAndMonth;
+        private RunStrategy runStrategy;
+        public ObservableCollection<string> SourceFolders { get => sourceFolders; set => SetProperty(ref sourceFolders, value); }
+        public string DestinationDirectory { get => destinationFolder; set => SetProperty(ref destinationFolder, value); }
+        public DeleteStrategy DeleteStrategy { get => deleteStrategy; set => SetProperty(ref deleteStrategy, value); }
+        public MoveStrategy MoveStrategy { get => moveStrategy; set => SetProperty(ref moveStrategy, value); }
+        public SortingStrategy SortingStrategy { get => sortingStrategy; set => SetProperty(ref sortingStrategy, value); }
+        public RunStrategy RunStrategy { get => runStrategy; set => SetProperty(ref runStrategy, value); }
+    }
+
+    internal class ReconciliationStatistics : ObservableObject
+    {
+        private long filesProcessed;
+        private long dataProcessed;
+        private long duplicatesDeleted;
+        private long duplicateData;
+        private long distinctSaved;
+        private long distinctData;
+        public long FilesProcessed { get => filesProcessed; set => SetProperty(ref filesProcessed, value); }
+        public long DataProcessed { get => dataProcessed; set => SetProperty(ref dataProcessed, value); }
+        public long DuplicatesDeleted { get => duplicatesDeleted; set => SetProperty(ref duplicatesDeleted, value); }
+        public long DuplicateData { get => duplicateData; set => SetProperty(ref duplicateData, value); }
+        public long DistinctSaved { get => distinctSaved; set => SetProperty(ref distinctSaved, value); }
+        public long DistinctData { get => distinctData; set => SetProperty(ref distinctData, value); }
+    }
+
+    internal class AnalysisResults : ObservableObject
+    {
         private long fileCount;
         private long sourceFoldersSize;
         private long numberOfFiles;
@@ -27,40 +79,6 @@ namespace ApexBytez.MediaRecon.ViewModel
         private long duplicateSize;
         private long numberOfDistinctFiles;
         private long distinctSize;
-        private double progressBarValue;
-        private double progressBarMaximum;
-        private TimeSpan analysisTime;
-
-        private Subject<ConflictedFiles> _conflictResolutions;
-        private Subject<ReconciledFile> _reconciledFiles;
-
-        private IDisposable resolutionDisposable;
-        private IDisposable reconciledDisposable;
-
-        private bool sortByDate = true;
-
-        private string destinationFolder;
-        private bool analysisInProgress;
-
-        public string DestinationDirectory { get => destinationFolder; set => SetProperty(ref destinationFolder, value); }
-
-        private ObservableCollection<string> sourceFolders = new ObservableCollection<string>();
-        public ObservableCollection<string> SourceFolders { get => sourceFolders; set => SetProperty(ref sourceFolders, value); }
-
-        private ObservableCollection<IFolderViewItem> reconciledDirectories = new ObservableCollection<IFolderViewItem>();
-        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get => reconciledDirectories; set => SetProperty(ref reconciledDirectories, value); }
-
-        private ObservableCollection<ConflictedFiles> renamedFiles = new ObservableCollection<ConflictedFiles>();
-
-        public ObservableCollection<ConflictedFiles> RenamedFiles { get => renamedFiles; set => SetProperty(ref renamedFiles, value); }
-
-        private ObservableCollection<string> removedItems = new ObservableCollection<string>();
-        public ObservableCollection<string> RemovedItems { get => removedItems; set => SetProperty(ref removedItems, value); }
-
-        private ObservableCollection<string> savedItems = new ObservableCollection<string>();
-        public ObservableCollection<string> SavedItems { get => savedItems; set => SetProperty(ref savedItems, value); }
-
-        public long FolderCount { get => folderCount; set => SetProperty(ref folderCount, value); }
         public long FileCount { get => fileCount; set => SetProperty(ref fileCount, value); }
         public long SourceFoldersSize { get => sourceFoldersSize; set => SetProperty(ref sourceFoldersSize, value); }
         public long NumberOfFiles { get => numberOfFiles; set => SetProperty(ref numberOfFiles, value); }
@@ -69,41 +87,58 @@ namespace ApexBytez.MediaRecon.ViewModel
         public long DuplicateSize { get => duplicateSize; set => SetProperty(ref duplicateSize, value); }
         public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
         public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
+        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get; private set; } = new ObservableCollection<IFolderViewItem>();
+        public List<ReconciledFile> ReconciledFiles { get; private set; } = new List<ReconciledFile>();
+        public ObservableCollection<ConflictedFiles> RenamedFiles { get; private set; } = new ObservableCollection<ConflictedFiles>();
+
+    }
+
+
+    internal abstract class RunnableStep : ObservableObject
+    {
+        private CancellationTokenSource cancellationTokenSource;
+        protected CancellationToken cancellationToken;
+        private bool canCancel;
+        private bool showResultLabel;
+        private string resultsLabel;
+        private double progressBarValue;
+        private double progressBarMaximum;
+        private TimeSpan analysisTime;
+        private bool analysisInProgress;
+        private RelayCommand cancelCommand;
+
         public double ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
         public double ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
-        public TimeSpan AnalysisTime { get => analysisTime; set => SetProperty(ref analysisTime, value); }
-        public bool SortByDate { get => sortByDate; set => SetProperty(ref sortByDate, value); }
+        public TimeSpan RunTime { get => analysisTime; set => SetProperty(ref analysisTime, value); }
         public bool Running { get => analysisInProgress; set => SetProperty(ref analysisInProgress, value); }
-
-        private RelayCommand cancelCommand;
-        private CancellationTokenSource cancellationTokenSource;
-        private CancellationToken cancellationToken;
+        public bool CanCancel { get => canCancel; set => SetProperty(ref canCancel, value); }
+        public bool ShowResultsLabel { get => showResultLabel; set => SetProperty(ref showResultLabel, value); }
+        public string ResultsLabel { get => resultsLabel; set => SetProperty(ref resultsLabel, value); }
         public RelayCommand CancelCommand => cancelCommand ??= new RelayCommand(Cancel, CanExecuteCancel);
-
-        private Subject<ReconciledFile> subject;
-        private IDisposable subjectDisposable;
-
-        public List<ReconciledFile> ReconciledFiles { get; private set; } = new List<ReconciledFile>();
-
         public void Cancel()
         {
             cancellationTokenSource.Cancel();
         }
-
         public bool CanExecuteCancel()
         {
             return CanCancel = Running &&
                 cancellationTokenSource != null &&
                 !cancellationTokenSource.IsCancellationRequested;
         }
-
-        private async Task Run(Func<Task> asyncTask)
+        protected abstract Task RunAsyncStep();
+        public async Task RunAsync()
+        {
+            await Run(RunAsyncStep);
+        }
+        protected async Task Run(Func<Task> asyncTask)
         {
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
             ProgressBarValue = 0;
             ProgressBarMaximum = 100;
+            RunTime = TimeSpan.Zero;
             Running = true;
+            
 
             Application.Current.Dispatcher.Invoke(() =>
             {
@@ -118,7 +153,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                     elapsedTime = elapsedTime.Add(x.Interval);
                     Application.Current.Dispatcher.BeginInvoke(() =>
                     {
-                        AnalysisTime = elapsedTime;
+                        RunTime = elapsedTime;
                     });
                 });
 
@@ -148,17 +183,26 @@ namespace ApexBytez.MediaRecon.ViewModel
             CanCancel = false;
             ShowResultsLabel = true;
         }
+    }
 
-        public async Task SaveResultsAsync()
+    internal class SaveResults : RunnableStep
+    {
+        private Subject<ReconciledFile> subject;
+        private IDisposable subjectDisposable;
+
+        public AnalysisResults AnalysisResults { get; private set; }
+        public AnalysisOptions AnalysisOptions { get; private set; }
+        public ReconciliationStatistics ReconStats { get; set; } = new ReconciliationStatistics();
+        public ObservableCollection<string> RemovedItems { get; set; } = new ObservableCollection<string>();
+        public ObservableCollection<string> SavedItems { get; set; } = new ObservableCollection<string>();
+
+        public SaveResults(AnalysisOptions analysisOptions, AnalysisResults analysisResults)
         {
-            await Run(ProcessResultsAsync);
-        }
-        public async Task RunAnalysisAsync()
-        {
-            await Run(PerformAnalysisAsync);
+            AnalysisOptions = analysisOptions;
+            AnalysisResults = analysisResults;
         }
 
-        private async Task ProcessResultsAsync()
+        protected override async Task RunAsyncStep()
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
@@ -171,47 +215,52 @@ namespace ApexBytez.MediaRecon.ViewModel
             {
                 // Would possible be best if we could created all the directories first then really use
                 //  the power of parallel processing on the files in a flat list
-                if (SortByDate)
+                switch (AnalysisOptions.SortingStrategy)
                 {
-                    foreach (var year in ReconciledDirectories
+                    case SortingStrategy.YearAndMonth:
+                        foreach (var year in AnalysisResults.ReconciledDirectories
                         .Where(x => x is IFolderViewFolder)
                         .Select(x => x as IFolderViewFolder))
-                    {
-                        var yearDir = Path.Combine(DestinationDirectory, year.Name);
-                        var yearDirExist = Directory.Exists(yearDir);
-
-                        if (!yearDirExist)
                         {
-                            Directory.CreateDirectory(yearDir);
-                        }
+                            var yearDir = Path.Combine(AnalysisOptions.DestinationDirectory, year.Name);
+                            var yearDirExist = Directory.Exists(yearDir);
 
-                        logMessage = string.Format(yearDirExist ? formatFolderExist : formatFolderCreated, yearDir);
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            SavedItems.Add(logMessage);
-                        });
-
-
-
-                        foreach (var month in year.Items
-                            .Where(x => x is IFolderViewFolder && !x.Name.Equals(".."))
-                            .Select(x => x as IFolderViewFolder))
-                        {
-                            var monthDir = Path.Combine(yearDir, month.Name);
-                            var monthDirExist = Directory.Exists(monthDir);
-
-                            if (!monthDirExist)
+                            if (!yearDirExist)
                             {
-                                Directory.CreateDirectory(monthDir);
+                                Directory.CreateDirectory(yearDir);
                             }
 
-                            logMessage = string.Format(monthDirExist ? formatFolderExist : formatFolderCreated, monthDir);
+                            logMessage = string.Format(yearDirExist ? formatFolderExist : formatFolderCreated, yearDir);
                             Application.Current.Dispatcher.Invoke(() =>
                             {
                                 SavedItems.Add(logMessage);
                             });
+
+
+
+                            foreach (var month in year.Items
+                                .Where(x => x is IFolderViewFolder && !x.Name.Equals(".."))
+                                .Select(x => x as IFolderViewFolder))
+                            {
+                                var monthDir = Path.Combine(yearDir, month.Name);
+                                var monthDirExist = Directory.Exists(monthDir);
+
+                                if (!monthDirExist)
+                                {
+                                    Directory.CreateDirectory(monthDir);
+                                }
+
+                                logMessage = string.Format(monthDirExist ? formatFolderExist : formatFolderCreated, monthDir);
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    SavedItems.Add(logMessage);
+                                });
+                            }
                         }
-                    }
+                        break;
+                    case SortingStrategy.None:
+                    default:
+                        break;
                 }
 
                 // Can we use FileInfo here? for things that are saved we can get updated, delete we use old
@@ -253,7 +302,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                             }
                         }
 
-                        var progressBarValue = ((double)ReconStats.FilesProcessed / FileCount) * 100;
+                        var progressBarValue = ((double)ReconStats.FilesProcessed / AnalysisResults.FileCount) * 100;
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             ReconStats.FilesProcessed = filesProcessed;
@@ -266,14 +315,14 @@ namespace ApexBytez.MediaRecon.ViewModel
                         });
                     });
 
-                await Parallel.ForEachAsync(ReconciledFiles,
+                await Parallel.ForEachAsync(AnalysisResults.ReconciledFiles,
                       new ParallelOptions { MaxDegreeOfParallelism = 64, CancellationToken = cancellationToken },
                       async (file, ct) =>
                       {
-                        // I want to do the work of copy/moving/deleting here...
-                        //  BUT... we cant update UI all willy nilly here. We need to maybe use another observable subject
-                        //  to streamline the events and update stats just like in the main analysis block
-                        string message = string.Empty;
+                          // I want to do the work of copy/moving/deleting here...
+                          //  BUT... we cant update UI all willy nilly here. We need to maybe use another observable subject
+                          //  to streamline the events and update stats just like in the main analysis block
+                          string message = string.Empty;
 
                           try
                           {
@@ -291,7 +340,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                           {
                               Debug.WriteLine(ex.ToString());
                           }
-                          
+
 
                           switch (file.ReconType)
                           {
@@ -329,17 +378,29 @@ namespace ApexBytez.MediaRecon.ViewModel
                 Debug.WriteLine(ex.Message);
             }
         }
+    }
 
-        private async Task PerformAnalysisAsync()
+    internal class Analysis : RunnableStep
+    {
+        private Subject<ConflictedFiles> _conflictResolutions;
+        private Subject<ReconciledFile> _reconciledFiles;
+        private IDisposable resolutionDisposable;
+        private IDisposable reconciledDisposable;
+
+        public AnalysisOptions AnalysisOptions { get; private set; }
+        public AnalysisResults AnalysisResults { get; private set; } = new AnalysisResults();
+
+        public Analysis(AnalysisOptions analysisOptions)
         {
-            ResetAnlysis();
+            AnalysisOptions = analysisOptions;
+        }
 
-            FolderCount = SourceFolders.Count();
-
+        protected override async Task RunAsyncStep()
+        {
             // This sorted list is binned on file name
-            var sortedFiles = FileAnalysis.GetSortedFileInfo(SourceFolders);
-            FileCount = sortedFiles.Sum(x => x.Value.Count);
-            SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
+            var sortedFiles = FileAnalysis.GetSortedFileInfo(AnalysisOptions.SourceFolders);
+            AnalysisResults.FileCount = sortedFiles.Sum(x => x.Value.Count);
+            AnalysisResults.SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
 
             _conflictResolutions = new Subject<ConflictedFiles>();
             resolutionDisposable = _conflictResolutions
@@ -349,7 +410,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                     {
                         // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
                         // Would have to use a concurrent object if not observable
-                        RenamedFiles.Add(x);
+                        AnalysisResults.RenamedFiles.Add(x);
                     });
                 });
 
@@ -359,11 +420,11 @@ namespace ApexBytez.MediaRecon.ViewModel
                 .Where(x => x.Count > 0)
                 .Subscribe(x =>
                 {
-                    long distinctCount = DistinctCount;
-                    long distinctSize = DistinctSize;
-                    long duplicateCount = DuplicateCount;
-                    long duplicateSize = DuplicateSize;
-                    long numberOfFiles = NumberOfFiles;
+                    long distinctCount = AnalysisResults.DistinctCount;
+                    long distinctSize = AnalysisResults.DistinctSize;
+                    long duplicateCount = AnalysisResults.DuplicateCount;
+                    long duplicateSize = AnalysisResults.DuplicateSize;
+                    long numberOfFiles = AnalysisResults.NumberOfFiles;
 
                     foreach (var file in x)
                     {
@@ -389,15 +450,15 @@ namespace ApexBytez.MediaRecon.ViewModel
                         }
                     }
 
-                    var progressBarValue = ((double)numberOfFiles / FileCount) * 100;
+                    var progressBarValue = ((double)numberOfFiles / AnalysisResults.FileCount) * 100;
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        DistinctCount = distinctCount;
-                        DuplicateCount = duplicateCount;
-                        DistinctSize = distinctSize;
-                        DuplicateSize = duplicateSize;
-                        NumberOfFiles = numberOfFiles;
-                        TotalSize = DistinctSize + DuplicateSize;
+                        AnalysisResults.DistinctCount = distinctCount;
+                        AnalysisResults.DuplicateCount = duplicateCount;
+                        AnalysisResults.DistinctSize = distinctSize;
+                        AnalysisResults.DuplicateSize = duplicateSize;
+                        AnalysisResults.NumberOfFiles = numberOfFiles;
+                        AnalysisResults.TotalSize = AnalysisResults.DistinctSize + AnalysisResults.DuplicateSize;
                         ProgressBarValue = progressBarValue;
                     });
                 });
@@ -443,85 +504,72 @@ namespace ApexBytez.MediaRecon.ViewModel
                 Debug.WriteLine(ex.Message);
             }
         }
-        private void ResetAnlysis()
-        {
-            FolderCount = 0;
-            FileCount = 0;
-            SourceFoldersSize = 0;
-            NumberOfFiles = 0;
-            TotalSize = 0;
-            DuplicateCount = 0;
-            DuplicateSize = 0;
-            DistinctCount = 0;
-            DistinctSize = 0;
-            ProgressBarValue = 0;
-            ProgressBarMaximum = 100;
-            AnalysisTime = TimeSpan.Zero;
-        }
-
+  
         private void InsertReconciledFile(ReconciledFile reconciled)
         {
-            ReconciledFiles.Add(reconciled);
+            AnalysisResults.ReconciledFiles.Add(reconciled);
 
-            if (!sortByDate)
+            switch (AnalysisOptions.SortingStrategy)
             {
-                reconciled.ReconciliationDirectory = DestinationDirectory;
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ReconciledDirectories.Add(reconciled);
-                });
-            }
-            else
-            {
-                bool isYearNew = false;
-                bool isMonthNew = false;
-                var year = reconciled.LastWriteTime.Year.ToString();
-                var month = reconciled.LastWriteTime.ToString("MMMM");
+                case SortingStrategy.YearAndMonth:
+                    bool isYearNew = false;
+                    bool isMonthNew = false;
+                    var year = reconciled.LastWriteTime.Year.ToString();
+                    var month = reconciled.LastWriteTime.ToString("MMMM");
 
-                reconciled.ReconciliationDirectory = Path.Combine(DestinationDirectory, year, month);
+                    reconciled.ReconciliationDirectory = Path.Combine(AnalysisOptions.DestinationDirectory, year, month);
 
-                var yearDir = ReconciledDirectories.FirstOrDefault(x => x.Name.Equals(year)) as ReconciledDirectory;
-                if (yearDir == null)
-                {
-                    var sentinel = new ReconciledDirectory("..", ReconciledDirectories);
-                    yearDir = new ReconciledDirectory(year, sentinel);
-                    isYearNew = true;
-                }
-
-                var monthDir = yearDir.Items.FirstOrDefault(x => x.Name.Equals(month)) as ReconciledDirectory;
-                if (monthDir == null)
-                {
-                    var sentinel = new ReconciledDirectory("..", yearDir.Items);
-                    monthDir = new ReconciledDirectory(month, sentinel);
-                    isMonthNew = true;
-                }
-
-                // If year is new, you can make whole structure before dispatch invoking
-                // If the month is new, you only need to dispatch on the year, not month
-                if (isYearNew)
-                {
-                    monthDir.Add(reconciled);
-                    yearDir.Add(monthDir);
-                    Application.Current.Dispatcher.Invoke(() =>
+                    var yearDir = AnalysisResults.ReconciledDirectories.FirstOrDefault(x => x.Name.Equals(year)) as ReconciledDirectory;
+                    if (yearDir == null)
                     {
-                        ReconciledDirectories.Add(yearDir);
-                    });
-                }
-                else if (isMonthNew)
-                {
-                    monthDir.Add(reconciled);
-                    Application.Current.Dispatcher.Invoke(() =>
+                        var sentinel = new ReconciledDirectory("..", AnalysisResults.ReconciledDirectories);
+                        yearDir = new ReconciledDirectory(year, sentinel);
+                        isYearNew = true;
+                    }
+
+                    var monthDir = yearDir.Items.FirstOrDefault(x => x.Name.Equals(month)) as ReconciledDirectory;
+                    if (monthDir == null)
                     {
-                        yearDir.Add(monthDir);
-                    });
-                }
-                else
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
+                        var sentinel = new ReconciledDirectory("..", yearDir.Items);
+                        monthDir = new ReconciledDirectory(month, sentinel);
+                        isMonthNew = true;
+                    }
+
+                    // If year is new, you can make whole structure before dispatch invoking
+                    // If the month is new, you only need to dispatch on the year, not month
+                    if (isYearNew)
                     {
                         monthDir.Add(reconciled);
+                        yearDir.Add(monthDir);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            AnalysisResults.ReconciledDirectories.Add(yearDir);
+                        });
+                    }
+                    else if (isMonthNew)
+                    {
+                        monthDir.Add(reconciled);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            yearDir.Add(monthDir);
+                        });
+                    }
+                    else
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            monthDir.Add(reconciled);
+                        });
+                    }
+                    break;
+                case SortingStrategy.None:
+                default:
+                    reconciled.ReconciliationDirectory = AnalysisOptions.DestinationDirectory;
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        AnalysisResults.ReconciledDirectories.Add(reconciled);
                     });
-                }
+                    break;
             }
         }
 
@@ -563,51 +611,7 @@ namespace ApexBytez.MediaRecon.ViewModel
             return bitwiseGoupings;
         }
 
-        public ReconciliationStatistics ReconStats { get; set; } = new ReconciliationStatistics();
-
-        private bool canCancel;
-
-        public bool CanCancel { get => canCancel; set => SetProperty(ref canCancel, value); }
-
-        private bool showResultLabel;
-
-        public bool ShowResultsLabel { get => showResultLabel; set => SetProperty(ref showResultLabel, value); }
-
-        private string resultsLabel;
-
-        public string ResultsLabel { get => resultsLabel; set => SetProperty(ref resultsLabel, value); }
-
     }
-
-    class ReconciliationStatistics : ObservableObject
-    {
-        private long filesProcessed;
-
-        public long FilesProcessed { get => filesProcessed; set => SetProperty(ref filesProcessed, value); }
-
-        private long dataProcessed;
-
-        public long DataProcessed { get => dataProcessed; set => SetProperty(ref dataProcessed, value); }
-
-        private long duplicatesDeleted;
-
-        public long DuplicatesDeleted { get => duplicatesDeleted; set => SetProperty(ref duplicatesDeleted, value); }
-
-        private long duplicateData;
-
-        public long DuplicateData { get => duplicateData; set => SetProperty(ref duplicateData, value); }
-
-        private long distinctSaved;
-
-        public long DistinctSaved { get => distinctSaved; set => SetProperty(ref distinctSaved, value); }
-
-        private long distinctData;
-
-        public long DistinctData { get => distinctData; set => SetProperty(ref distinctData, value); }
-    }
-
-    class AnalysisStatistics
-    { }
 
     class ArrayComparer<T> : IEqualityComparer<T[]>
     {

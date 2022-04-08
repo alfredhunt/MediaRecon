@@ -100,7 +100,7 @@
     <DockPanel>
         <Label DockPanel.Dock="Top" Content="Review and update automatic renamings before saving your results"/>
         <GroupBox Margin="2" Header="Renamed Files">
-            <ListView ItemsSource="{Binding Analysis.RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView ItemsSource="{Binding AnalysisResults.RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListView.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel Orientation="Vertical"/>

@@ -3,13 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" 
              xmlns:mahConverters="http://metro.mahapps.com/winfx/xaml/shared"
+             xmlns:controls="clr-namespace:MvvmWizard.Controls;assembly=MvvmWizard" xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Orange.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Cyan.xaml" />
 
                 <!-- Must go after MahApps Resources -->
                 <ResourceDictionary Source="Styles/WizardStep.xaml"/>
@@ -20,11 +21,20 @@
             </ResourceDictionary.MergedDictionaries>
           
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
+
 
             <Style BasedOn="{StaticResource {x:Type Label}}"
                    TargetType="{x:Type Label}">
                 <Setter Property="FontSize" Value="16" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
+            </Style>
+
+            <Style BasedOn="{StaticResource MahApps.Styles.RadioButton}"
+                   TargetType="{x:Type RadioButton}">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontFamily" Value="Segoe UI" />
+                <Setter Property="Margin" Value="3"/>
             </Style>
 
         </ResourceDictionary>

@@ -95,12 +95,6 @@ namespace ApexBytez.MediaRecon.View
                         // Show these items
                         DataGrid.ItemsSource = ((IFolderViewFolder)folderItem).Items;
 
-                        //foreach (var item in ((IFolderViewFolder)folderItem).Items)
-                        //{
-                        //    ListView.Items.Add(item);
-                        //}
-
-
                         break;
                     case FolderViewItemType.File:
                         try

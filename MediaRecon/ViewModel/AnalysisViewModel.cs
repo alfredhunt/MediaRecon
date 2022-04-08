@@ -39,7 +39,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                 return;
             }
 
-            transitionContext.SharedContext["Analysis"] = Analysis;
+            transitionContext.SharedContext["AnalysisResults"] = Analysis.AnalysisResults;
 
             // Save data here
             await Task.Delay(0);
@@ -47,34 +47,35 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         public override Task OnTransitedTo(TransitionContext transitionContext)
         {
-            Analysis = transitionContext.SharedContext["Analysis"] as Analysis;
+            
 
             if (transitionContext.TransitToStep > transitionContext.TransitedFromStep)
             {
+                var options = transitionContext.SharedContext["AnalysisOptions"] as AnalysisOptions;
+
                 // Forward transition, do Analysis if setup has changed
-                
+
                 // Start the analysis...
-                Task.Run(() => RunAnalysis());
+                Task.Run(async () =>
+                {
+                    // Has the analsis already ran? Don't run it again unless the configuration changes
+                    ForwardButtonIsEnabled = false;
+                    Analysis = new Analysis(options);
+                    try
+                    {
+                        await Analysis.RunAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex.Message);
+                    }
+
+                    ForwardButtonIsEnabled = true;
+                });
 
             }
 
             return base.OnTransitedTo(transitionContext);
-        }
-
-        private async void RunAnalysis()
-        {
-            // Has the analsis already ran? Don't run it again unless the configuration changes
-            ForwardButtonIsEnabled = false;
-            try
-            {
-                await Analysis.RunAnalysisAsync();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
-
-            ForwardButtonIsEnabled = true;
         }
 
         private Analysis? analysis;
