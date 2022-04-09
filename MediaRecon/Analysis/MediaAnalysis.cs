@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MethodTimer;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -96,7 +97,7 @@ namespace ApexBytez.MediaRecon.Analysis
                 Debug.WriteLine(ex.Message);
             }
         }
-  
+        [Time]
         private void ProcessReconciledFiles(IList<ReconciledFile> x)
         {
             long distinctCount = AnalysisResults.DistinctCount;
@@ -129,7 +130,10 @@ namespace ApexBytez.MediaRecon.Analysis
                 }
             }
 
-            var progressBarValue = ((double)numberOfFiles / AnalysisResults.FileCount) * Properties.Settings.Default.ProgressBarMaximum;
+            var progressRatio = ((double)numberOfFiles / AnalysisResults.FileCount);
+            var percentageComplete = progressRatio * 100;
+            var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
+            
             Application.Current.Dispatcher.Invoke(() =>
             {
                 AnalysisResults.DistinctCount = distinctCount;
@@ -138,7 +142,8 @@ namespace ApexBytez.MediaRecon.Analysis
                 AnalysisResults.DuplicateSize = duplicateSize;
                 AnalysisResults.NumberOfFiles = numberOfFiles;
                 AnalysisResults.TotalSize = AnalysisResults.DistinctSize + AnalysisResults.DuplicateSize;
-                ProgressBarValue = progressBarValue;
+                ProgressBarValue = (int)progressBarValue;
+                ProgressPercentage = percentageComplete;
             });
         }
 

@@ -25,10 +25,28 @@ namespace ApexBytez.MediaRecon.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("100")]
-        public double ProgressBarMaximum {
+        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        public int ProgressBarMaximum {
             get {
-                return ((double)(this["ProgressBarMaximum"]));
+                return ((int)(this["ProgressBarMaximum"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("24")]
+        public int TimerInterval {
+            get {
+                return ((int)(this["TimerInterval"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        public int DryRunDelay {
+            get {
+                return ((int)(this["DryRunDelay"]));
             }
         }
     }

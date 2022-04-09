@@ -49,16 +49,22 @@
                     <Label Content="Run Time" Width="{Binding ElementName=ColumnOne, Path=ActualWidth}"
                            DockPanel.Dock="Left" />
                     <Label DockPanel.Dock="Left" Width="200" Content="{Binding RunTime}"/>
-                    <Button DockPanel.Dock="Right" Width="100"
-                            Content="Cancel" 
-                        Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
-                        Command="{Binding CancelCommand}" />
-                    <Label DockPanel.Dock="Right"  Content="{Binding ResultsLabel}" 
-                       Visibility="{Binding ShowResultsLabel, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <mah:MetroProgressBar 
-                                      Margin="5"
-                                      Value="{Binding ProgressBarValue}"
-                                      Maximum="{Binding ProgressBarMaximum}"/>
+                    <Grid DockPanel.Dock="Right" MinWidth="100">
+                        <Button Content="Cancel" 
+                            Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Command="{Binding CancelCommand}" />
+                        <Label Content="{Binding ResultsLabel}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding ShowResultsLabel, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    </Grid>
+                    <Grid Margin="3">
+                        <mah:MetroProgressBar
+                            Value="{Binding ProgressBarValue}"
+                            Maximum="{Binding ProgressBarMaximum}"/>
+                        <Label Content="{Binding ProgressPercentage}"
+                               ContentStringFormat="{}{00:0}%"
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" />
+                    </Grid>
                 </DockPanel>
             </StackPanel>
             

@@ -17,10 +17,10 @@ namespace ApexBytez.MediaRecon.ViewModel
     internal class SaveViewModel : StepViewModelBase
     {
         public bool forwardButtonIsEnabled;
-        private SaveResults saveResults;
+        private SaveResultsStep saveResults;
 
         public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
-        public SaveResults SaveResults { get => saveResults; private set => SetProperty(ref saveResults, value); }
+        public SaveResultsStep SaveResults { get => saveResults; private set => SetProperty(ref saveResults, value); }
 
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
         {
@@ -67,7 +67,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                 {
                     // Has the analsis already ran? Don't run it again unless the configuration changes
                     ForwardButtonIsEnabled = false;
-                    SaveResults = new SaveResults(analysisOptions, analysisResults);
+                    SaveResults = new SaveResultsStep(analysisOptions, analysisResults);
                     try
                     {
                         await SaveResults.RunAsync();

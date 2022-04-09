@@ -16,16 +16,18 @@ namespace ApexBytez.MediaRecon.Analysis
         private bool canCancel;
         private bool showResultLabel;
         private string resultsLabel;
-        private double progressBarValue;
-        private double progressBarMaximum;
-        private TimeSpan analysisTime;
-        private bool analysisInProgress;
+        private int progressBarValue;
+        private int progressBarMaximum;
+        private double progressPercentage;
+        private TimeSpan runTime;
+        private bool running;
         private RelayCommand cancelCommand;
 
-        public double ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
-        public double ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
-        public TimeSpan RunTime { get => analysisTime; set => SetProperty(ref analysisTime, value); }
-        public bool Running { get => analysisInProgress; set => SetProperty(ref analysisInProgress, value); }
+        public int ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
+        public int ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
+        public double ProgressPercentage { get => progressPercentage; set => SetProperty(ref progressPercentage, value); }
+        public TimeSpan RunTime { get => runTime; set => SetProperty(ref runTime, value); }
+        public bool Running { get => running; set => SetProperty(ref running, value); }
         public bool CanCancel { get => canCancel; set => SetProperty(ref canCancel, value); }
         public bool ShowResultsLabel { get => showResultLabel; set => SetProperty(ref showResultLabel, value); }
         public string ResultsLabel { get => resultsLabel; set => SetProperty(ref resultsLabel, value); }
@@ -61,7 +63,7 @@ namespace ApexBytez.MediaRecon.Analysis
             });
 
             TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
-            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
+            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(Properties.Settings.Default.TimerInterval))
                 .TimeInterval()
                 .Subscribe(x =>
                 {
