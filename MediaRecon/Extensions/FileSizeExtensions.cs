@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ApexBytez.MediaRecon
+namespace ApexBytez.MediaRecon.Extensions
 {
     /// <summary>
     /// 
     /// </summary>
     /// <seealso cref="https://stackoverflow.com/questions/14488796/does-net-provide-an-easy-way-convert-bytes-to-kb-mb-gb-etc"/>
-    internal static class Extensions
+    internal static class FileSizeExtensions
     {
         public enum SizeUnits
         {

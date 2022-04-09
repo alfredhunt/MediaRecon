@@ -23,15 +23,12 @@ namespace ApexBytez.MediaRecon.Properties {
             }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string SourceFolders {
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public double ProgressBarMaximum {
             get {
-                return ((string)(this["SourceFolders"]));
-            }
-            set {
-                this["SourceFolders"] = value;
+                return ((double)(this["ProgressBarMaximum"]));
             }
         }
     }

@@ -3,6 +3,7 @@ using MvvmWizard.Classes;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using ApexBytez.MediaRecon.Analysis;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {

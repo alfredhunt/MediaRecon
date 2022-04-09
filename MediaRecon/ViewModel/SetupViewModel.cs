@@ -6,25 +6,26 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using ApexBytez.MediaRecon.Analysis;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
     internal class SetupViewModel : StepViewModelBase
     {
-        private AnalysisOptions analysisOptions = new AnalysisOptions();
+        public bool forwardButtonIsEnabled;
         private int selectedSourceFolderIndex;
         private ICommand removeSourceFolder;
         private ICommand addSourceFolderCommand;
         private ICommand chooseDestinationFolderCommand;
-        private Analysis analysis;
-        public bool forwardButtonIsEnabled;
+        private MediaAnalysis analysis;
+        private AnalysisOptions analysisOptions = new AnalysisOptions();
 
         public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
         public int SelectedSourceFolderIndex { get => selectedSourceFolderIndex; set => SetProperty(ref selectedSourceFolderIndex, value); }
         public ICommand RemoveSourceFolder => removeSourceFolder ??= new RelayCommand(PerformRemoveSourceFolder);
         public ICommand AddSourceFolderCommand => addSourceFolderCommand ??= new RelayCommand(ExecuteAddSourceFolderCommand);
         public ICommand ChooseDestinationFolderCommand => chooseDestinationFolderCommand ??= new RelayCommand(SelectedReconciliationFolder);
-        public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
+        public MediaAnalysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
         public AnalysisOptions AnalysisOptions { get => analysisOptions; set => SetProperty(ref analysisOptions, value); }
 
         public SetupViewModel()
@@ -32,8 +33,7 @@ namespace ApexBytez.MediaRecon.ViewModel
             AnalysisOptions.SourceFolders.CollectionChanged += SourceFolders_CollectionChanged;
 
             // DEBUG
-            AnalysisOptions.SourceFolders.Add(@"F:\Pictures\Wedding");
-            AnalysisOptions.SourceFolders.Add(@"F:\Pictures\OurWedding");
+            AnalysisOptions.SourceFolders.Add(@"F:\TestData");
             AnalysisOptions.DestinationDirectory = @"F:\TestResults";
         }
 
@@ -84,6 +84,7 @@ namespace ApexBytez.MediaRecon.ViewModel
             CommonOpenFileDialog dialog = new CommonOpenFileDialog();
             dialog.InitialDirectory = "C:\\";
             dialog.IsFolderPicker = true;
+            dialog.Multiselect = true;
             if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
             {
                 AnalysisOptions.SourceFolders.Add(dialog.FileName);

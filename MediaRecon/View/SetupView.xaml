@@ -3,9 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:ApexBytez.MediaRecon.View" 
-             xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" 
              xmlns:analysis="clr-namespace:ApexBytez.MediaRecon.Analysis" 
+             xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel"
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" 
              d:DataContext="{d:DesignInstance Type=viewmodel:SetupViewModel}"
@@ -62,11 +61,11 @@
                         <RadioButton Content="Move to recycle bin"
                                      IsChecked="{Binding DeleteStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:DeleteStrategy.Soft}}"/>
+                            ConverterParameter={x:Static analysis:DeleteStrategy.Soft}}"/>
                         <RadioButton Content="Get rid of them" 
                                      IsChecked="{Binding DeleteStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:DeleteStrategy.Hard}}"/>
+                            ConverterParameter={x:Static analysis:DeleteStrategy.Hard}}"/>
                     </StackPanel>
 
                     <Label Content="Should we move or copy unique files?"/>
@@ -74,11 +73,11 @@
                         <RadioButton Content="Move them" 
                                      IsChecked="{Binding MoveStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:MoveStrategy.Move}}"/>
+                            ConverterParameter={x:Static analysis:MoveStrategy.Move}}"/>
                         <RadioButton Content="Copy them" 
                                      IsChecked="{Binding MoveStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:MoveStrategy.Copy}}"/>
+                            ConverterParameter={x:Static analysis:MoveStrategy.Copy}}"/>
                     </StackPanel>
 
                     <Label Content="Should we sort the results by year and month?"/>
@@ -86,11 +85,11 @@
                         <RadioButton Content="Sort results" 
                                      IsChecked="{Binding SortingStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:SortingStrategy.YearAndMonth}}"/>
+                            ConverterParameter={x:Static analysis:SortingStrategy.YearAndMonth}}"/>
                         <RadioButton Content="I want all my files in one folder" 
                                      IsChecked="{Binding SortingStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:SortingStrategy.None}}"/>
+                            ConverterParameter={x:Static analysis:SortingStrategy.None}}"/>
                     </StackPanel>
 
                     <Label Content="Ready to free up some space and organize your media?"/>
@@ -98,11 +97,11 @@
                         <RadioButton Content="Lets do it!"
                                      IsChecked="{Binding RunStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:RunStrategy.Normal}}"/>
+                            ConverterParameter={x:Static analysis:RunStrategy.Normal}}"/>
                         <RadioButton Content="Show me how it works with a dry run"
                                      IsChecked="{Binding RunStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static viewmodel:RunStrategy.DryRun}}"/>
+                            ConverterParameter={x:Static analysis:RunStrategy.DryRun}}"/>
                     </StackPanel>
                     
                 </StackPanel>

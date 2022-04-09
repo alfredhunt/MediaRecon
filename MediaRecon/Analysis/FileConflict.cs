@@ -7,9 +7,10 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using ApexBytez.MediaRecon.Extensions;
 
 
-namespace ApexBytez.MediaRecon
+namespace ApexBytez.MediaRecon.Analysis
 {
     internal class ReconciledDirectory : ObservableObject, IFolderViewFolder
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace ApexBytez.MediaRecon
+namespace ApexBytez.MediaRecon.IO
 {
     /// <summary>
     /// https://stackoverflow.com/questions/3282418/send-a-file-to-the-recycle-bin

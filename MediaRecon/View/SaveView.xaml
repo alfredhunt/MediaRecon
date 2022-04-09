@@ -7,63 +7,72 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls" 
              xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" 
              xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" 
-             d:DataContext="{d:DesignInstance Type=viewmodel:Analysis}"
+             d:DataContext="{d:DesignInstance Type=viewmodel:SaveViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <DockPanel DataContext="{Binding SaveResults}">
         <GroupBox Header="Save Results"  
                   DockPanel.Dock="Top" >
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition/>
-                    <RowDefinition/>
-                    <RowDefinition/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <Label Grid.Row="1" Grid.Column="0" Content="Files Processed"/>
-                <Label Grid.Row="1" Grid.Column="1" Content="{Binding ReconStats.FilesProcessed}"/>
-                <Label Grid.Row="2" Grid.Column="0" Content="Data Processed"/>
-                <Label Grid.Row="2" Grid.Column="1" Content="{Binding ReconStats.DataProcessed, Converter={converters:FileSizeFormatConverter}}" />
+                    <Label Grid.Row="1" Grid.Column="0" Content="Files Processed" x:Name="ColumnOne"/>
+                    <Label Grid.Row="1" Grid.Column="1" Content="{Binding ReconStats.FilesProcessed}"/>
+                    <Label Grid.Row="2" Grid.Column="0" Content="Data Processed"/>
+                    <Label Grid.Row="2" Grid.Column="1" Content="{Binding ReconStats.DataProcessed, Converter={converters:FileSizeFormatConverter}}" />
 
-                <Label Grid.Row="1" Grid.Column="2" Content="Duplicates Deleted"/>
-                <Label Grid.Row="1" Grid.Column="3" Content="{Binding ReconStats.DuplicatesDeleted}"/>
-                <Label Grid.Row="2" Grid.Column="2" Content="Space Freed"/>
-                <Label Grid.Row="2" Grid.Column="3" Content="{Binding ReconStats.DuplicateData, Converter={converters:FileSizeFormatConverter}}"/>
+                    <Label Grid.Row="1" Grid.Column="2" Content="Duplicates Deleted"/>
+                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding ReconStats.DuplicatesDeleted}"/>
+                    <Label Grid.Row="2" Grid.Column="2" Content="Space Freed"/>
+                    <Label Grid.Row="2" Grid.Column="3" Content="{Binding ReconStats.DuplicateData, Converter={converters:FileSizeFormatConverter}}"/>
 
-                <Label Grid.Row="1" Grid.Column="4" Content="Distinct Saved"/>
-                <Label Grid.Row="1" Grid.Column="5" Content="{Binding ReconStats.DistinctSaved}"/>
-                <Label Grid.Row="2" Grid.Column="4" Content="Size on Disk"/>
-                <Label Grid.Row="2" Grid.Column="5" Content="{Binding ReconStats.DistinctData, Converter={converters:FileSizeFormatConverter}}"/>
+                    <Label Grid.Row="1" Grid.Column="4" Content="Distinct Saved"/>
+                    <Label Grid.Row="1" Grid.Column="5" Content="{Binding ReconStats.DistinctSaved}"/>
+                    <Label Grid.Row="2" Grid.Column="4" Content="Size on Disk"/>
+                    <Label Grid.Row="2" Grid.Column="5" Content="{Binding ReconStats.DistinctData, Converter={converters:FileSizeFormatConverter}}"/>
 
-                <Label Grid.Row="3" Grid.Column="0" Content="Progress"/>
-                <mah:MetroProgressBar Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="4" Margin="5"
-                             Value="{Binding ProgressBarValue}"
-                             Maximum="{Binding ProgressBarMaximum}"/>
-                <Button Grid.Row="3" Grid.Column="7" Content="Cancel" 
+                </Grid>
+                <DockPanel>
+                    <Label Content="Run Time" Width="{Binding ElementName=ColumnOne, Path=ActualWidth}"
+                           DockPanel.Dock="Left" />
+                    <Label DockPanel.Dock="Left" Width="200" Content="{Binding RunTime}"/>
+                    <Button DockPanel.Dock="Right" Width="100"
+                            Content="Cancel" 
                         Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
                         Command="{Binding CancelCommand}" />
-                <Label Grid.Row="3" Grid.Column="7" Content="{Binding ResultsLabel}" 
+                    <Label DockPanel.Dock="Right"  Content="{Binding ResultsLabel}" 
                        Visibility="{Binding ShowResultsLabel, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            </Grid>
+                    <mah:MetroProgressBar 
+                                      Margin="5"
+                                      Value="{Binding ProgressBarValue}"
+                                      Maximum="{Binding ProgressBarMaximum}"/>
+                </DockPanel>
+            </StackPanel>
+            
         </GroupBox>
 
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
             <GroupBox Header="Recycled" Grid.Column="0">
                 <ListView x:Name="RemovedItemsListView"
-                      ItemsSource="{Binding RemovedItems}"
+                      ItemsSource="{Binding ReconStats.RemovedItems}"
                       IsSynchronizedWithCurrentItem="True" >
                     <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -72,10 +81,11 @@
                     </ListView.ItemsPanel>
                 </ListView>
             </GroupBox>
-            <GroupBox Header="Reconciled" Grid.Column="1">
+            <GridSplitter Grid.Column="1" Width="3"/>
+            <GroupBox Header="Reconciled" Grid.Column="2">
                 <!--Could Look into some kind of treeview thing here for this-->
                 <ListView x:Name="SavedItemsListView"
-                      ItemsSource="{Binding SavedItems}"
+                      ItemsSource="{Binding ReconStats.SavedItems}"
                       IsSynchronizedWithCurrentItem="True" >
                     <ListView.ItemsPanel>
                         <ItemsPanelTemplate>

@@ -6,7 +6,7 @@
         <Setter Property="SummaryItemBrush" Value="{StaticResource MahApps.Brushes.Accent}" />
         <Setter Property="ProcessedSummaryItemBrush" Value="{StaticResource MahApps.Brushes.Accent3}" />
         <Setter Property="ActiveSummaryItemBrush" Value="{StaticResource MahApps.Brushes.Accent}" />
-        <Setter Property="SummaryItemMouseOverBrush" Value="{StaticResource MahApps.Brushes.AccentBaseColorBrush}" />
+        <Setter Property="SummaryItemMouseOverBrush" Value="{StaticResource MahApps.Brushes.AccentBase}" />
         <Setter Property="BackButtonForeground" Value="{StaticResource MahApps.Brushes.Accent}" />
         <Setter Property="BackButtonBackground" Value="Transparent" />
         <Setter Property="BackButtonMouseMouseOverBackground" Value="{StaticResource MahApps.Brushes.Gray8}" />

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using ApexBytez.MediaRecon.Analysis;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
@@ -60,7 +61,7 @@ namespace ApexBytez.MediaRecon.ViewModel
                 {
                     // Has the analsis already ran? Don't run it again unless the configuration changes
                     ForwardButtonIsEnabled = false;
-                    Analysis = new Analysis(options);
+                    Analysis = new MediaAnalysis(options);
                     try
                     {
                         await Analysis.RunAsync();
@@ -78,10 +79,10 @@ namespace ApexBytez.MediaRecon.ViewModel
             return base.OnTransitedTo(transitionContext);
         }
 
-        private Analysis? analysis;
+        private MediaAnalysis? analysis;
         public bool forwardButtonIsEnabled;
    
-        public Analysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
+        public MediaAnalysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
         public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
     }
 }

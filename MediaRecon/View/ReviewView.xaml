@@ -3,19 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:MediaRecon="clr-namespace:ApexBytez.MediaRecon" xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
+             xmlns:analysis="clr-namespace:ApexBytez.MediaRecon.Analysis"
+             xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     
     <UserControl.Resources>
         
-        <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
+        <DataTemplate DataType="{x:Type analysis:UniqueFile}">
             <GroupBox Header="{Binding Name}">
                 <TextBlock Text="{Binding Path}" />
             </GroupBox>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type MediaRecon:DuplicateFiles}">
+        <DataTemplate DataType="{x:Type analysis:DuplicateFiles}">
             <Expander>
                 <Expander.Header>
                     <DockPanel HorizontalAlignment="Stretch">
@@ -33,7 +34,7 @@
             </Expander>
         </DataTemplate>
         
-        <DataTemplate DataType="{x:Type MediaRecon:ConflictedFiles}">
+        <DataTemplate DataType="{x:Type analysis:ConflictedFiles}">
             <Expander>
                 <Expander.Header>
                     <DockPanel>
@@ -48,7 +49,7 @@
                     </ListView.ItemsPanel>
 
                     <ListView.Resources>
-                        <DataTemplate DataType="{x:Type MediaRecon:UniqueFile}">
+                        <DataTemplate DataType="{x:Type analysis:UniqueFile}">
                             <GroupBox Header="Unique">
                                 <StackPanel Orientation="Horizontal">
                                     <Label Content="Renamed: "/>
@@ -57,7 +58,7 @@
                             </GroupBox>
                         </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type MediaRecon:DuplicateFiles}">
+                        <DataTemplate DataType="{x:Type analysis:DuplicateFiles}">
                             <GroupBox>
                                 <GroupBox.Header>
                                     <StackPanel>
