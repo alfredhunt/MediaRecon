@@ -9,6 +9,7 @@ using System.Windows;
 
 namespace ApexBytez.MediaRecon.Analysis
 {
+
     internal abstract class RunnableStep : ObservableObject
     {
         private CancellationTokenSource cancellationTokenSource;
@@ -22,6 +23,9 @@ namespace ApexBytez.MediaRecon.Analysis
         private TimeSpan runTime;
         private bool running;
         private RelayCommand cancelCommand;
+        protected TimeSpan elapsedTime;
+        protected IProgress<TimeSpan> iprogress;
+        protected DateTime startTime;
 
         public int ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
         public int ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
@@ -55,27 +59,17 @@ namespace ApexBytez.MediaRecon.Analysis
             ProgressBarMaximum = Properties.Settings.Default.ProgressBarMaximum;
             RunTime = TimeSpan.Zero;
             Running = true;
-            
 
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 CancelCommand.NotifyCanExecuteChanged();
             });
 
-            TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
-            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(Properties.Settings.Default.TimerInterval))
-                .TimeInterval()
-                .Subscribe(x =>
-                {
-                    elapsedTime = elapsedTime.Add(x.Interval);
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        RunTime = elapsedTime;
-                    });
-                });
+
 
             try
             {
+                // TODO: pass the cancellation token in so it's clear that it's being used.
                 await asyncTask();
                 ResultsLabel = "Done!";
             }
@@ -91,13 +85,13 @@ namespace ApexBytez.MediaRecon.Analysis
             }
             finally
             {
-                observableTimer.Dispose();
+                //observableTimer.Dispose();
             }
 
             // TODO: probably need to work on the statefulness of this processing and the UI elements
             //  visibility.
             Running = false;
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 CancelCommand.NotifyCanExecuteChanged();
             });

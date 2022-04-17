@@ -26,6 +26,6 @@ namespace ApexBytez.MediaRecon.Analysis
         public ObservableCollection<IFolderViewItem> ReconciledDirectories { get; set; } = new ObservableCollection<IFolderViewItem>();
         public List<ReconciledFile> ReconciledFiles { get; private set; } = new List<ReconciledFile>();
         public ObservableCollection<ConflictedFiles> RenamedFiles { get; private set; } = new ObservableCollection<ConflictedFiles>();
-
+        public long FilesProcessed { get; internal set; }
     }
 }

@@ -94,7 +94,7 @@ namespace ApexBytez.MediaRecon.Analysis
                     });
 
                 await Parallel.ForEachAsync(AnalysisResults.ReconciledFiles,
-                      new ParallelOptions { MaxDegreeOfParallelism = 32, CancellationToken = cancellationToken },
+                      new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancellationToken },
                       async (file, ct) =>
                       {
                           // I want to do the work of copy/moving/deleting here...

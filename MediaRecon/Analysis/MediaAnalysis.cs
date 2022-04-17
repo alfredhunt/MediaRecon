@@ -20,7 +20,7 @@ namespace ApexBytez.MediaRecon.Analysis
         private Subject<ReconciledFile> _reconciledFiles;
         private IDisposable resolutionDisposable;
         private IDisposable reconciledDisposable;
-        private long numberOfFilesToAnalysis;
+        private long numFilesToAnalyze;
 
         public AnalysisOptions AnalysisOptions { get; private set; }
         public AnalysisResults AnalysisResults { get; private set; } = new AnalysisResults();
@@ -30,8 +30,18 @@ namespace ApexBytez.MediaRecon.Analysis
             AnalysisOptions = analysisOptions;
         }
 
+        private AnalysisResults currentProgress = new AnalysisResults();
+
         protected override async Task RunAsyncStep()
         {
+            startTime = DateTime.Now;
+            var updateDisposable = Observable.Interval(TimeSpan.FromMilliseconds(42))
+                .Subscribe(async x =>
+                {
+                    await UpdateProgress();
+                });
+
+
             // This sorted list is binned on file name
             var yearMonthSorted = FileAnalysis.GetYearMonthSortedFileInfo(AnalysisOptions.SourceFolders);
 
@@ -85,28 +95,10 @@ namespace ApexBytez.MediaRecon.Analysis
                     else
                     {
                         duplicates.Add(group);
-                        numberOfFilesToAnalysis += group.Count;
+                        numFilesToAnalyze += group.Count;
                     }
                 }
             }
-
-            _conflictResolutions = new Subject<ConflictedFiles>();
-            resolutionDisposable = _conflictResolutions
-                .Subscribe(x =>
-                {
-                    // Probably don't need this observable
-                    AnalysisResults.RenamedFiles.Add(x);
-                    
-                });
-
-            _reconciledFiles = new Subject<ReconciledFile>();
-            reconciledDisposable = _reconciledFiles
-                .Buffer(TimeSpan.FromMilliseconds(24),50)
-                .Where(x => x.Count > 0)
-                .Subscribe(x =>
-                {
-                    ProcessReconciledFiles(x);
-                });
 
             // Continue to split this up so the progress is for the files being analyzed
             //  and not the ones that are quickly determined to be unique.
@@ -116,32 +108,66 @@ namespace ApexBytez.MediaRecon.Analysis
                 foreach (var file in distinct)
                 {
                     var uniqueFile = new UniqueFile(file);
-                    _reconciledFiles.OnNext(uniqueFile);
+                    currentProgress.NumberOfFiles++;
+                    currentProgress.DistinctCount++;
+                    currentProgress.DistinctSize += uniqueFile.Size;
+                    await InsertReconciledFileAsync(uniqueFile);
                 }
 
                 // What if we still us a semaphore to only allow so many of these
                 //  these parallel threads to do the more computationally expensive operation?
                 await Parallel.ForEachAsync(duplicates,
-                    new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken },
+                    new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancellationToken },
                     async (fileList, ct) =>
                     {
                         Debug.Assert(fileList.Count() > 1);
                         
                         var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList, ct);
+
                         if (bitwiseGoupings.Count() == 1)
                         {
                             var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
-                            _reconciledFiles.OnNext(duplicateFiles);
+
+                            currentProgress.NumberOfFiles += duplicateFiles.TotalFileCount;
+                            currentProgress.DistinctCount += duplicateFiles.NumberOfDistinctFiles;
+                            currentProgress.DuplicateCount += duplicateFiles.NumberOfDuplicateFiles;
+                            currentProgress.DistinctSize += duplicateFiles.Size;
+                            currentProgress.DuplicateSize += duplicateFiles.DuplicateFileSystemSize;
+                            currentProgress.FilesProcessed += duplicateFiles.TotalFileCount;
+
+                            await InsertReconciledFileAsync(duplicateFiles);
                         }
 
                         // If 2+, then we have files with the same name but different data and it gets a bit trickier
                         else if (bitwiseGoupings.Count() > 1)
                         {
                             var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
-                            _conflictResolutions.OnNext(conflictedFiles);
+                            // This isn't bound to UI so okay not to invoke
+                            AnalysisResults.RenamedFiles.Add(conflictedFiles);
+                            //_conflictResolutions.OnNext(conflictedFiles);
                             foreach (var file in conflictedFiles.ReconciledFiles)
                             {
-                                _reconciledFiles.OnNext(file);
+                                switch (file.ReconType)
+                                {
+                                    case ReconType.Duplicate:
+                                        var duplicateFiles = (DuplicateFiles)file;
+                                        currentProgress.NumberOfFiles += duplicateFiles.TotalFileCount;
+                                        currentProgress.DistinctCount += duplicateFiles.NumberOfDistinctFiles;
+                                        currentProgress.DuplicateCount += duplicateFiles.NumberOfDuplicateFiles;
+                                        currentProgress.DistinctSize += duplicateFiles.Size;
+                                        currentProgress.DuplicateSize += duplicateFiles.DuplicateFileSystemSize;
+                                        currentProgress.FilesProcessed += duplicateFiles.TotalFileCount;
+                                        await InsertReconciledFileAsync(duplicateFiles);
+                                        break;
+                                    case ReconType.Distinct:
+                                        var distinctFile = (UniqueFile)file;
+                                        currentProgress.NumberOfFiles++;
+                                        currentProgress.DistinctCount++;
+                                        currentProgress.DistinctSize += distinctFile.Size;
+                                        currentProgress.FilesProcessed++;
+                                        await InsertReconciledFileAsync(distinctFile);
+                                        break;
+                                }
                             }
                         }
                         
@@ -152,136 +178,34 @@ namespace ApexBytez.MediaRecon.Analysis
                 Debug.WriteLine(ex.Message);
             }
 
-            
-
+            await Task.Delay(100);
+            updateDisposable.Dispose();
         }
 
-        protected async Task RunAsyncStepOriginal()
-        {
-            
-            var sortedFiles = FileAnalysis.GetSortedFileInfo(AnalysisOptions.SourceFolders);
-            AnalysisResults.FileCount = sortedFiles.Sum(x => x.Value.Count);
-            AnalysisResults.SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
-
-            _conflictResolutions = new Subject<ConflictedFiles>();
-            resolutionDisposable = _conflictResolutions
-                .Subscribe(x =>
-                {
-                    Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
-                        // Would have to use a concurrent object if not observable
-                        AnalysisResults.RenamedFiles.Add(x);
-                    });
-                });
-
-            _reconciledFiles = new Subject<ReconciledFile>();
-            reconciledDisposable = _reconciledFiles
-                .Buffer(TimeSpan.FromMilliseconds(24))
-                .Where(x => x.Count > 0)
-                .Subscribe(x =>
-                {
-                    ProcessReconciledFiles(x);
-                });
-
-            try
-            {
-                await Parallel.ForEachAsync(sortedFiles,
-                    new ParallelOptions { MaxDegreeOfParallelism = 1, CancellationToken = cancellationToken },
-                    async (fileList, ct) =>
-                    {
-                        //StatusBarDescription = string.Format("Processing {0}", fileList.Value.First().FullName);
-
-                        if (fileList.Value.Count() == 1)
-                        {
-                            var uniqueFile = new UniqueFile(fileList.Value.First());
-                            _reconciledFiles.OnNext(uniqueFile);
-                        }
-                        // If 2+ items, we analyze
-                        else if (fileList.Value.Count() > 1)
-                        {
-                            var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList.Value, ct);
-                            if (bitwiseGoupings.Count() == 1)
-                            {
-                                var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
-                                _reconciledFiles.OnNext(duplicateFiles);
-                            }
-
-                            // If 2+, then we have files with the same name but different data and it gets a bit trickier
-                            else if (bitwiseGoupings.Count() > 1)
-                            {
-                                var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
-                                _conflictResolutions.OnNext(conflictedFiles);
-                                foreach (var file in conflictedFiles.ReconciledFiles)
-                                {
-                                    _reconciledFiles.OnNext(file);
-                                }
-                            }
-                        }
-                    });
-            }
-            catch (OperationCanceledException ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
-        }
+   
         [Time]
-        private void ProcessReconciledFiles(IList<ReconciledFile> x)
+        private async Task UpdateProgress()
         {
-            // TOOD: Lets split this up into stages to make the progress more accurate
-            // Total Runtime + Step progress and maybe runtime.
-            long distinctCount = AnalysisResults.DistinctCount;
-            long distinctSize = AnalysisResults.DistinctSize;
-            long duplicateCount = AnalysisResults.DuplicateCount;
-            long duplicateSize = AnalysisResults.DuplicateSize;
-            long numberOfFiles = AnalysisResults.NumberOfFiles;
-
-            foreach (var file in x)
-            {
-                switch (file.ReconType)
-                {
-                    case ReconType.Duplicate:
-                        var duplicateFiles = (DuplicateFiles)file;
-                        InsertReconciledFile(duplicateFiles);
-                        numberOfFiles += duplicateFiles.TotalFileCount;
-                        distinctCount += duplicateFiles.NumberOfDistinctFiles;
-                        duplicateCount += duplicateFiles.NumberOfDuplicateFiles;
-                        distinctSize += duplicateFiles.Size;
-                        duplicateSize += duplicateFiles.DuplicateFileSystemSize;
-
-                        break;
-                    case ReconType.Distinct:
-                        var distinctFile = (UniqueFile)file;
-                        InsertReconciledFile(distinctFile);
-                        numberOfFiles++;
-                        distinctCount++;
-                        distinctSize += distinctFile.Size;
-                        break;
-                }
-            }
-
-            //var progressRatio = ((double)numberOfFiles / AnalysisResults.FileCount);
-            //var percentageComplete = progressRatio * 100;
-            //var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
-
-            var progressRatio = ((double)AnalysisResults.DuplicateCount / numberOfFilesToAnalysis);
+            var progressRatio = ((double)currentProgress.FilesProcessed / numFilesToAnalyze);
             var percentageComplete = progressRatio * 100;
             var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
+            var runTime = DateTime.Now - startTime;
 
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                AnalysisResults.DistinctCount = distinctCount;
-                AnalysisResults.DuplicateCount = duplicateCount;
-                AnalysisResults.DistinctSize = distinctSize;
-                AnalysisResults.DuplicateSize = duplicateSize;
-                AnalysisResults.NumberOfFiles = numberOfFiles;
+                AnalysisResults.DistinctCount = currentProgress.DistinctCount;
+                AnalysisResults.DuplicateCount = currentProgress.DuplicateCount;
+                AnalysisResults.DistinctSize = currentProgress.DistinctSize;
+                AnalysisResults.DuplicateSize = currentProgress.DuplicateSize;
+                AnalysisResults.NumberOfFiles = currentProgress.NumberOfFiles;
                 AnalysisResults.TotalSize = AnalysisResults.DistinctSize + AnalysisResults.DuplicateSize;
                 ProgressBarValue = (int)progressBarValue;
                 ProgressPercentage = percentageComplete;
+                RunTime = runTime;
             });
         }
 
-        private void InsertReconciledFile(ReconciledFile reconciled)
+        private async Task InsertReconciledFileAsync(ReconciledFile reconciled)
         {
             AnalysisResults.ReconciledFiles.Add(reconciled);
 
@@ -317,7 +241,7 @@ namespace ApexBytez.MediaRecon.Analysis
                     {
                         monthDir.Add(reconciled);
                         yearDir.Add(monthDir);
-                        Application.Current.Dispatcher.Invoke(() =>
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             AnalysisResults.ReconciledDirectories.Add(yearDir);
                         });
@@ -325,14 +249,14 @@ namespace ApexBytez.MediaRecon.Analysis
                     else if (isMonthNew)
                     {
                         monthDir.Add(reconciled);
-                        Application.Current.Dispatcher.Invoke(() =>
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             yearDir.Add(monthDir);
                         });
                     }
                     else
                     {
-                        Application.Current.Dispatcher.BeginInvoke(() =>
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             monthDir.Add(reconciled);
                         });
@@ -341,7 +265,7 @@ namespace ApexBytez.MediaRecon.Analysis
                 case SortingStrategy.None:
                 default:
                     reconciled.ReconciliationDirectory = AnalysisOptions.DestinationDirectory;
-                    Application.Current.Dispatcher.Invoke(() =>
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         AnalysisResults.ReconciledDirectories.Add(reconciled);
                     });
@@ -372,15 +296,15 @@ namespace ApexBytez.MediaRecon.Analysis
                         byte[] hash;
                         using (var fs = fileInfo.OpenRead())
                         {
-                            hash = await MD5.Create().ComputeHashAsync(fs, cancellationToken);
+                            hash = await SHA256.Create().ComputeHashAsync(fs, cancellationToken);
                         }
                         fileHashes.Add(new Tuple<byte[], FileInfo>(hash, fileInfo));
                     }
                     var hashGroups = fileHashes.GroupBy(x => x.Item1, new ArrayComparer<byte>());
-                    Debug.WriteLine("{0}: {1} files in {2} hash groups", 
-                        filesWithSameLength.First().Name,
-                        fileHashes.Count,
-                        hashGroups.Count());
+                    //Debug.WriteLine("{0}: {1} files in {2} hash groups", 
+                    //    filesWithSameLength.First().Name,
+                    //    fileHashes.Count,
+                    //    hashGroups.Count());
                     foreach (var files in hashGroups)
                     {
                         IEnumerable<FileInfo>? filesPerHash = files.Select(x => x.Item2);
@@ -391,6 +315,76 @@ namespace ApexBytez.MediaRecon.Analysis
 
             return bitwiseGoupings;
         }
+
+        //protected async Task RunAsyncStepOriginal()
+        //{
+
+        //    var sortedFiles = FileAnalysis.GetSortedFileInfo(AnalysisOptions.SourceFolders);
+        //    AnalysisResults.FileCount = sortedFiles.Sum(x => x.Value.Count);
+        //    AnalysisResults.SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
+
+        //    _conflictResolutions = new Subject<ConflictedFiles>();
+        //    resolutionDisposable = _conflictResolutions
+        //        .Subscribe(x =>
+        //        {
+        //            Application.Current.Dispatcher.BeginInvoke(() =>
+        //            {
+        //                // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
+        //                // Would have to use a concurrent object if not observable
+        //                AnalysisResults.RenamedFiles.Add(x);
+        //            });
+        //        });
+
+        //    _reconciledFiles = new Subject<ReconciledFile>();
+        //    reconciledDisposable = _reconciledFiles
+        //        .Buffer(TimeSpan.FromMilliseconds(24))
+        //        .Where(x => x.Count > 0)
+        //        .Subscribe(x =>
+        //        {
+        //            ProcessReconciledFilesAsync(x);
+        //        });
+
+        //    try
+        //    {
+        //        await Parallel.ForEachAsync(sortedFiles,
+        //            new ParallelOptions { MaxDegreeOfParallelism = 1, CancellationToken = cancellationToken },
+        //            async (fileList, ct) =>
+        //            {
+        //                //StatusBarDescription = string.Format("Processing {0}", fileList.Value.First().FullName);
+
+        //                if (fileList.Value.Count() == 1)
+        //                {
+        //                    var uniqueFile = new UniqueFile(fileList.Value.First());
+        //                    _reconciledFiles.OnNext(uniqueFile);
+        //                }
+        //                // If 2+ items, we analyze
+        //                else if (fileList.Value.Count() > 1)
+        //                {
+        //                    var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList.Value, ct);
+        //                    if (bitwiseGoupings.Count() == 1)
+        //                    {
+        //                        var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
+        //                        _reconciledFiles.OnNext(duplicateFiles);
+        //                    }
+
+        //                    // If 2+, then we have files with the same name but different data and it gets a bit trickier
+        //                    else if (bitwiseGoupings.Count() > 1)
+        //                    {
+        //                        var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
+        //                        _conflictResolutions.OnNext(conflictedFiles);
+        //                        foreach (var file in conflictedFiles.ReconciledFiles)
+        //                        {
+        //                            _reconciledFiles.OnNext(file);
+        //                        }
+        //                    }
+        //                }
+        //            });
+        //    }
+        //    catch (OperationCanceledException ex)
+        //    {
+        //        Debug.WriteLine(ex.Message);
+        //    }
+        //}
 
     }
 }
