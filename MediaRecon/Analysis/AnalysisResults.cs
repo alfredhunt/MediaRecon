@@ -23,7 +23,7 @@ namespace ApexBytez.MediaRecon.Analysis
         public long DuplicateSize { get => duplicateSize; set => SetProperty(ref duplicateSize, value); }
         public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
         public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
-        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get; private set; } = new ObservableCollection<IFolderViewItem>();
+        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get; set; } = new ObservableCollection<IFolderViewItem>();
         public List<ReconciledFile> ReconciledFiles { get; private set; } = new List<ReconciledFile>();
         public ObservableCollection<ConflictedFiles> RenamedFiles { get; private set; } = new ObservableCollection<ConflictedFiles>();
 

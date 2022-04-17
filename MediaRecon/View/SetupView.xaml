@@ -26,7 +26,7 @@
                 </DockPanel>
                 <GroupBox Header="Folders">
                     <ListBox x:Name="SourceListBox" Margin="5,0"
-                         ItemsSource="{Binding AnalysisOptions.SourceFolders}" 
+                         ItemsSource="{Binding AnalysisOptions.SourceFolders, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}" 
                          SelectedIndex="{Binding SelectedSourceFolderIndex}" 
                          AllowDrop="True"
                          DragEnter="SourceListBox_DragEnter"
@@ -38,6 +38,15 @@
                                 <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
                             </ContextMenu>
                         </ListBox.ContextMenu>
+                        <Validation.ErrorTemplate>
+                            <ControlTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Placeholder for the TextBox itself -->
+                                    <AdornedElementPlaceholder x:Name="textBox"/>
+                                    <TextBlock Margin="10" Text="{Binding [0].ErrorContent}" Foreground="Red"/>
+                                </StackPanel>
+                            </ControlTemplate>
+                        </Validation.ErrorTemplate>
                     </ListBox>
                 </GroupBox>
             </DockPanel>
@@ -50,7 +59,17 @@
                 <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="3">
                     <Label Content="Where would you like to save the results to?"/>
                     <Button Content="Choose Destination Folder" Margin="5,0"
-                        Command="{Binding ChooseDestinationFolderCommand}"/>
+                        Command="{Binding ChooseDestinationFolderCommand, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}">
+                        <Validation.ErrorTemplate>
+                            <ControlTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Placeholder for the TextBox itself -->
+                                    <AdornedElementPlaceholder x:Name="textBox"/>
+                                    <TextBlock Margin="10" Text="{Binding [0].ErrorContent}" Foreground="Red"/>
+                                </StackPanel>
+                            </ControlTemplate>
+                        </Validation.ErrorTemplate>
+                    </Button>
                 </StackPanel>
 
             </GroupBox>

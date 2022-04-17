@@ -33,7 +33,7 @@ namespace ApexBytez.MediaRecon.ViewModel
             AnalysisOptions.SourceFolders.CollectionChanged += SourceFolders_CollectionChanged;
 
             // DEBUG
-            AnalysisOptions.SourceFolders.Add(@"F:\TestData");
+            AnalysisOptions.SourceFolders.Add(@"F:\Pictures");
             AnalysisOptions.DestinationDirectory = @"F:\TestResults";
         }
 

@@ -43,7 +43,7 @@ namespace ApexBytez.MediaRecon.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        [global::System.Configuration.DefaultSettingValueAttribute("250")]
         public int DryRunDelay {
             get {
                 return ((int)(this["DryRunDelay"]));

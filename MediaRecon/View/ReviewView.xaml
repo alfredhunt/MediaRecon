@@ -51,10 +51,16 @@
                     <ListView.Resources>
                         <DataTemplate DataType="{x:Type analysis:UniqueFile}">
                             <GroupBox Header="Unique">
-                                <StackPanel Orientation="Horizontal">
-                                    <Label Content="Renamed: "/>
-                                    <TextBlock Text="{Binding Name}"/>
+                                <StackPanel HorizontalAlignment="Left">
+                                    <Image Source="{Binding FullName}" Width="300"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Label Content="Renamed: "/>
+                                        <Label Content="{Binding Name}"/>
+                                        <Label Content="{Binding FullName}"/>
+                                        <Label Content="{Binding Size}"/>
+                                    </StackPanel>
                                 </StackPanel>
+                                
                             </GroupBox>
                         </DataTemplate>
 

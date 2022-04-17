@@ -48,7 +48,7 @@
                 <DockPanel>
                     <Label Content="Run Time" Width="{Binding ElementName=ColumnOne, Path=ActualWidth}"
                            DockPanel.Dock="Left" />
-                    <Label DockPanel.Dock="Left" Width="200" Content="{Binding RunTime}"/>
+                    <Label DockPanel.Dock="Left" Width="150" Content="{Binding RunTime}"/>
                     <Grid DockPanel.Dock="Right" MinWidth="100">
                         <Button Content="Cancel" 
                             Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"

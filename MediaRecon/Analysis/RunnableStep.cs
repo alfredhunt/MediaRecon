@@ -45,9 +45,9 @@ namespace ApexBytez.MediaRecon.Analysis
         protected abstract Task RunAsyncStep();
         public async Task RunAsync()
         {
-            await Run(RunAsyncStep);
+            await RunAsync(RunAsyncStep);
         }
-        protected async Task Run(Func<Task> asyncTask)
+        protected async Task RunAsync(Func<Task> asyncTask)
         {
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
@@ -68,7 +68,7 @@ namespace ApexBytez.MediaRecon.Analysis
                 .Subscribe(x =>
                 {
                     elapsedTime = elapsedTime.Add(x.Interval);
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
                         RunTime = elapsedTime;
                     });
@@ -83,6 +83,11 @@ namespace ApexBytez.MediaRecon.Analysis
             {
                 Debug.WriteLine(ex.Message);
                 ResultsLabel = "Cancelled";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                ResultsLabel = "Error";
             }
             finally
             {

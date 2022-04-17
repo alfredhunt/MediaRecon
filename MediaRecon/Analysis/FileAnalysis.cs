@@ -1,5 +1,6 @@
 ﻿using MethodTimer;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,22 +13,7 @@ namespace ApexBytez.MediaRecon
 {
     internal class FileAnalysis
     {
-        internal class AnalysisResults
-        {
-
-        }
-
-        public static AnalysisResults AnalyzeDirectories(IEnumerable<string> directories)
-        {
-            var allFiles = FileAnalysis.GetFileInfo(directories);
-            var groupedByName = allFiles.GroupBy(x => x.Name);
-            var uniqueFiles = groupedByName.Where(x => x.Count() == 1).Select(x => x.First());
-
-
-            return new AnalysisResults();
-        }
-
-
+        [Time]
         public static SortedList<string, List<FileInfo>> GetSortedFileInfo(IEnumerable<string> directories)
         {
             var sortedList = new SortedList<string, List<FileInfo>>();
@@ -61,6 +47,38 @@ namespace ApexBytez.MediaRecon
             foreach (DirectoryInfo dirInfo in directoryInfo.GetDirectories())
             {
                 GetSortedFileInfo(dirInfo, sortedList);
+            }
+        }
+        [Time]
+        public static ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> GetYearMonthSortedFileInfo(IEnumerable<string> directories)
+        {
+            ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> concurrentList = new();
+            foreach (string directory in directories)
+            {
+                GetYearMonthSortedFileInfo(new DirectoryInfo(directory), concurrentList);
+            }
+            return concurrentList;
+        }
+
+        public static void GetYearMonthSortedFileInfo(DirectoryInfo directoryInfo, ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> concurrentList)
+        {
+            // For each file in directory
+            foreach (var file in directoryInfo.EnumerateFiles())
+            {
+                //var year = file.LastWriteTime.Year;
+                //var month = file.LastWriteTime.Month;
+                var yearMonthKey = file.LastWriteTime.ToString("MM/yyyy");
+
+                var yearMonthDictionary = concurrentList.GetOrAdd(yearMonthKey, new ConcurrentDictionary<string, List<FileInfo>>());
+
+                var fileNameList = yearMonthDictionary.GetOrAdd(file.Name, new List<FileInfo>());
+
+                fileNameList.Add(file);
+            }
+            // Then recurse directories
+            foreach (DirectoryInfo dirInfo in directoryInfo.GetDirectories())
+            {
+                GetYearMonthSortedFileInfo(dirInfo, concurrentList);
             }
         }
 

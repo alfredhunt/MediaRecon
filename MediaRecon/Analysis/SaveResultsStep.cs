@@ -16,7 +16,7 @@ namespace ApexBytez.MediaRecon.Analysis
 {
     internal class SaveResultsStep : RunnableStep
     {
-        private Subject<ReconciledFile> subject;
+        private Subject<KeyValuePair<ProcessedType, long>> subject;
         private IDisposable subjectDisposable;
         public AnalysisOptions AnalysisOptions { get; private set; }
         public AnalysisResults AnalysisResults { get; private set; }
@@ -85,7 +85,7 @@ namespace ApexBytez.MediaRecon.Analysis
 
                 // Can we use FileInfo here? for things that are saved we can get updated, delete we use old
                 // and we can also pass some status to show saved/delete...  Might work
-                subject = new Subject<ReconciledFile>();
+                subject = new Subject<KeyValuePair<ProcessedType, long>>();
                 subjectDisposable = subject.Buffer(TimeSpan.FromMilliseconds(24))
                     .Where(x => x.Count > 0)
                     .Subscribe(x =>
@@ -102,7 +102,16 @@ namespace ApexBytez.MediaRecon.Analysis
                           //  to streamline the events and update stats just like in the main analysis block
                           string message = string.Empty;
 
-                          switch(AnalysisOptions.RunStrategy)
+                          message = string.Format("Moving {0} from {1} to {2}",
+                                  file.Name,
+                                  file.FullName,
+                                  file.ReconciledFilePath);
+                          await Application.Current.Dispatcher.BeginInvoke(() =>
+                          {
+                              ReconStats.SavedItems.Add(message);
+                          });
+
+                          switch (AnalysisOptions.RunStrategy)
                           {
                               case RunStrategy.Normal:
                                   // TODO: We need to figure out a strat for when the destination has files in it
@@ -117,23 +126,14 @@ namespace ApexBytez.MediaRecon.Analysis
                                   break;
                               case RunStrategy.DryRun:
                                   // Simulate some cost of copying or moving
-                                  await Task.Delay(Properties.Settings.Default.DryRunDelay);
+                                  await Task.Delay(Properties.Settings.Default.DryRunDelay, ct);
                                   break;
                               default:
                                   // Shouldn't ever get here.
                                   break;
                           }
-                          
 
-                          message = string.Format("Moved {0} from {1} to {2}",
-                                  file.Name,
-                                  file.FullName,
-                                  file.ReconciledFilePath);
-                          await Application.Current.Dispatcher.BeginInvoke(() =>
-                          {
-                              ReconStats.SavedItems.Add(message);
-                          });
-
+                          subject.OnNext(new KeyValuePair<ProcessedType, long>(ProcessedType.Distinct, file.Size));
 
                           switch (file.ReconType)
                           {
@@ -144,35 +144,38 @@ namespace ApexBytez.MediaRecon.Analysis
                               case ReconType.Duplicate:
                                   var duplicate = file as DuplicateFiles;
 
-                                  switch (AnalysisOptions.RunStrategy)
+                                  foreach (var item in duplicate.Files.Skip(1))
                                   {
-                                      case RunStrategy.Normal:
-                                          foreach (var item in duplicate.Files.Skip(1))
-                                          {
+                                      // TODO: do we want or need to produce a list of all files remove?
+                                      // Might be a good idea
+                                      message = string.Format("Removing {0}", item.FullName);
+                                      await Application.Current.Dispatcher.BeginInvoke(() =>
+                                      {
+                                          ReconStats.RemovedItems.Add(message);
+                                      });
+
+                                      switch (AnalysisOptions.RunStrategy)
+                                      {
+                                          case RunStrategy.Normal:
+
+                                              // TODO: Could use a different type of observable that accepts each file
+                                              //    plus a flag denoting unique/save/moved and duplicate/recycled/deleted
                                               FileOperationAPIWrapper.MoveToRecycleBin(item.FullName);
-                                          }
-                                          break;
-                                      case RunStrategy.DryRun:
-                                          // Simulate some cost of copying or moving
-                                          await Task.Delay(Properties.Settings.Default.DryRunDelay);
-                                          break;
-                                      default:
-                                          // Shouldn't ever get here.
-                                          break;
+
+                                              break;
+                                          case RunStrategy.DryRun:
+                                              // Simulate some cost of copying or moving
+                                              await Task.Delay(Properties.Settings.Default.DryRunDelay, ct);
+                                              break;
+                                          default:
+                                              // Shouldn't ever get here.
+                                              break;
+                                      }
+
+                                      subject.OnNext(new KeyValuePair<ProcessedType, long>(ProcessedType.Duplicate, item.Length));
                                   }
-                                  // TODO: do we want or need to produce a list of all files remove?
-                                  // Might be a good idea
-                                  message = string.Format("Removing {0} duplicate(s) of {1}",
-                                      duplicate.NumberOfDuplicateFiles,
-                                      duplicate.Name);
-                                  await Application.Current.Dispatcher.BeginInvoke(() =>
-                                  {
-                                      ReconStats.RemovedItems.Add(message);
-                                  });
                                   break;
                           }
-
-                          subject.OnNext(file);
                       });
             }
             catch (OperationCanceledException ex)
@@ -180,39 +183,42 @@ namespace ApexBytez.MediaRecon.Analysis
                 Debug.WriteLine(ex.Message);
             }
         }
-        [Time]
-        private void ProcessReconciledFiles(IList<ReconciledFile> x)
+
+        internal enum ProcessedType
+        {
+            Distinct,
+            Duplicate
+        }
+
+        private void ProcessReconciledFiles(IList<KeyValuePair<ProcessedType, long>> processedFiles)
         {
             long filesProcessed = ReconStats.FilesProcessed;
             long dataProcessed = ReconStats.DataProcessed;
+
             long duplicatesDeleted = ReconStats.DuplicatesDeleted;
             long duplicateData = ReconStats.DuplicateData;
+
             long distinctSaved = ReconStats.DistinctSaved;
             long distinctData = ReconStats.DistinctData;
 
-            foreach (var file in x)
+            foreach (var file in processedFiles)
             {
-                switch (file.ReconType)
-                {
-                    case ReconType.Distinct:
-                        filesProcessed++;
-                        dataProcessed += file.Size;
+                filesProcessed++;
+                dataProcessed += file.Value;
 
+                switch (file.Key)
+                {
+                    case ProcessedType.Distinct:
+                        distinctSaved++;
+                        distinctData += file.Value;
                         break;
-                    case ReconType.Duplicate:
-                        var duplicate = file as DuplicateFiles;
-                        filesProcessed += duplicate.TotalFileCount;
-                        dataProcessed += duplicate.TotalFileSystemSize;
-                        duplicatesDeleted += duplicate.NumberOfDuplicateFiles;
-                        duplicateData += duplicate.DuplicateFileSystemSize;
-                        distinctSaved += duplicate.NumberOfDistinctFiles;
-                        distinctData += duplicate.Size;
-                        break;
-                    default:
-                        Debug.Assert(false);
+                    case ProcessedType.Duplicate:
+                        duplicatesDeleted++;
+                        duplicateData += file.Value;
                         break;
                 }
             }
+
             var progressRatio = ((double)filesProcessed / AnalysisResults.FileCount);
             var percentageComplete = progressRatio * 100;
             var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
@@ -227,6 +233,7 @@ namespace ApexBytez.MediaRecon.Analysis
                 ProgressBarValue = (int)progressBarValue;
                 ProgressPercentage = percentageComplete;
             });
+
         }
     }
 }
