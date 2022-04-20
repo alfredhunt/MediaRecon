@@ -21,6 +21,7 @@ namespace ApexBytez.MediaRecon.Analysis
         private IDisposable resolutionDisposable;
         private IDisposable reconciledDisposable;
         private long numFilesToAnalyze;
+        private object tplLock = new object();
 
         public AnalysisOptions AnalysisOptions { get; private set; }
         public AnalysisResults AnalysisResults { get; private set; } = new AnalysisResults();
@@ -34,14 +35,6 @@ namespace ApexBytez.MediaRecon.Analysis
 
         protected override async Task RunAsyncStep()
         {
-            startTime = DateTime.Now;
-            var updateDisposable = Observable.Interval(TimeSpan.FromMilliseconds(42))
-                .Subscribe(async x =>
-                {
-                    await UpdateProgress();
-                });
-
-
             // This sorted list is binned on file name
             var yearMonthSorted = FileAnalysis.GetYearMonthSortedFileInfo(AnalysisOptions.SourceFolders);
 
@@ -108,9 +101,12 @@ namespace ApexBytez.MediaRecon.Analysis
                 foreach (var file in distinct)
                 {
                     var uniqueFile = new UniqueFile(file);
-                    currentProgress.NumberOfFiles++;
-                    currentProgress.DistinctCount++;
-                    currentProgress.DistinctSize += uniqueFile.Size;
+                    lock (tplLock)
+                    {
+                        currentProgress.NumberOfFiles++;
+                        currentProgress.DistinctCount++;
+                        currentProgress.DistinctSize += uniqueFile.Size;
+                    }
                     await InsertReconciledFileAsync(uniqueFile);
                 }
 
@@ -127,13 +123,15 @@ namespace ApexBytez.MediaRecon.Analysis
                         if (bitwiseGoupings.Count() == 1)
                         {
                             var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
-
-                            currentProgress.NumberOfFiles += duplicateFiles.TotalFileCount;
-                            currentProgress.DistinctCount += duplicateFiles.NumberOfDistinctFiles;
-                            currentProgress.DuplicateCount += duplicateFiles.NumberOfDuplicateFiles;
-                            currentProgress.DistinctSize += duplicateFiles.Size;
-                            currentProgress.DuplicateSize += duplicateFiles.DuplicateFileSystemSize;
-                            currentProgress.FilesProcessed += duplicateFiles.TotalFileCount;
+                            lock (tplLock)
+                            {
+                                currentProgress.NumberOfFiles += duplicateFiles.TotalFileCount;
+                                currentProgress.DistinctCount += duplicateFiles.NumberOfDistinctFiles;
+                                currentProgress.DuplicateCount += duplicateFiles.NumberOfDuplicateFiles;
+                                currentProgress.DistinctSize += duplicateFiles.Size;
+                                currentProgress.DuplicateSize += duplicateFiles.DuplicateFileSystemSize;
+                                currentProgress.FilesProcessed += duplicateFiles.TotalFileCount;
+                            }
 
                             await InsertReconciledFileAsync(duplicateFiles);
                         }
@@ -151,20 +149,26 @@ namespace ApexBytez.MediaRecon.Analysis
                                 {
                                     case ReconType.Duplicate:
                                         var duplicateFiles = (DuplicateFiles)file;
-                                        currentProgress.NumberOfFiles += duplicateFiles.TotalFileCount;
-                                        currentProgress.DistinctCount += duplicateFiles.NumberOfDistinctFiles;
-                                        currentProgress.DuplicateCount += duplicateFiles.NumberOfDuplicateFiles;
-                                        currentProgress.DistinctSize += duplicateFiles.Size;
-                                        currentProgress.DuplicateSize += duplicateFiles.DuplicateFileSystemSize;
-                                        currentProgress.FilesProcessed += duplicateFiles.TotalFileCount;
+                                        lock (tplLock)
+                                        {
+                                            currentProgress.NumberOfFiles += duplicateFiles.TotalFileCount;
+                                            currentProgress.DistinctCount += duplicateFiles.NumberOfDistinctFiles;
+                                            currentProgress.DuplicateCount += duplicateFiles.NumberOfDuplicateFiles;
+                                            currentProgress.DistinctSize += duplicateFiles.Size;
+                                            currentProgress.DuplicateSize += duplicateFiles.DuplicateFileSystemSize;
+                                            currentProgress.FilesProcessed += duplicateFiles.TotalFileCount;
+                                        }
                                         await InsertReconciledFileAsync(duplicateFiles);
                                         break;
                                     case ReconType.Distinct:
                                         var distinctFile = (UniqueFile)file;
-                                        currentProgress.NumberOfFiles++;
-                                        currentProgress.DistinctCount++;
-                                        currentProgress.DistinctSize += distinctFile.Size;
-                                        currentProgress.FilesProcessed++;
+                                        lock (tplLock)
+                                        {
+                                            currentProgress.NumberOfFiles++;
+                                            currentProgress.DistinctCount++;
+                                            currentProgress.DistinctSize += distinctFile.Size;
+                                            currentProgress.FilesProcessed++;
+                                        }
                                         await InsertReconciledFileAsync(distinctFile);
                                         break;
                                 }
@@ -176,32 +180,29 @@ namespace ApexBytez.MediaRecon.Analysis
             catch (OperationCanceledException ex)
             {
                 Debug.WriteLine(ex.Message);
-            }
-
-            await Task.Delay(100);
-            updateDisposable.Dispose();
+            }            
         }
 
-   
-        [Time]
-        private async Task UpdateProgress()
+        protected override Task UpdateProgress()
         {
-            var progressRatio = ((double)currentProgress.FilesProcessed / numFilesToAnalyze);
-            var percentageComplete = progressRatio * 100;
-            var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
-            var runTime = DateTime.Now - startTime;
+            return Task.Run(async () => {
+                var progressRatio = ((double)currentProgress.FilesProcessed / numFilesToAnalyze);
+                var percentageComplete = progressRatio * 100;
+                var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
+                var runTime = DateTime.Now - startTime;
 
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                AnalysisResults.DistinctCount = currentProgress.DistinctCount;
-                AnalysisResults.DuplicateCount = currentProgress.DuplicateCount;
-                AnalysisResults.DistinctSize = currentProgress.DistinctSize;
-                AnalysisResults.DuplicateSize = currentProgress.DuplicateSize;
-                AnalysisResults.NumberOfFiles = currentProgress.NumberOfFiles;
-                AnalysisResults.TotalSize = AnalysisResults.DistinctSize + AnalysisResults.DuplicateSize;
-                ProgressBarValue = (int)progressBarValue;
-                ProgressPercentage = percentageComplete;
-                RunTime = runTime;
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    AnalysisResults.DistinctCount = currentProgress.DistinctCount;
+                    AnalysisResults.DuplicateCount = currentProgress.DuplicateCount;
+                    AnalysisResults.DistinctSize = currentProgress.DistinctSize;
+                    AnalysisResults.DuplicateSize = currentProgress.DuplicateSize;
+                    AnalysisResults.NumberOfFiles = currentProgress.NumberOfFiles;
+                    AnalysisResults.TotalSize = AnalysisResults.DistinctSize + AnalysisResults.DuplicateSize;
+                    ProgressBarValue = (int)progressBarValue;
+                    ProgressPercentage = percentageComplete;
+                    RunTime = runTime;
+                });
             });
         }
 

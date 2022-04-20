@@ -6,7 +6,7 @@
              xmlns:analysis="clr-namespace:ApexBytez.MediaRecon.Analysis" 
              xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel"
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
-             xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" 
+             xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              d:DataContext="{d:DesignInstance Type=viewmodel:SetupViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -17,15 +17,15 @@
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
 
-        <GroupBox Header="Media Sources" Grid.Column="0">
+        <GroupBox Header="Media Sources" Grid.Column="0" Padding="5,5,0,5">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top">
-                    <Button DockPanel.Dock="Bottom" Content="Add Folder"
-                                    Command="{Binding AddSourceFolderCommand}"/>
+                    <Button DockPanel.Dock="Right" 
+                            Content="Add" Style="{StaticResource DefaultButton}"
+                            Command="{Binding AddSourceFolderCommand}"/>
                     <Label Content="What folders would you like to analyze?"/>
                 </DockPanel>
-                <GroupBox Header="Folders">
-                    <ListBox x:Name="SourceListBox" Margin="5,0"
+                <ListBox x:Name="SourceListBox" Margin="5,10,5,5"
                          ItemsSource="{Binding AnalysisOptions.SourceFolders, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}" 
                          SelectedIndex="{Binding SelectedSourceFolderIndex}" 
                          AllowDrop="True"
@@ -33,32 +33,43 @@
                          DragOver="SourceListBox_DragOver"
                          Drop="SourceListBox_Drop"
                          KeyUp="SourceListBox_KeyUp">
-                        <ListBox.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
-                            </ContextMenu>
-                        </ListBox.ContextMenu>
-                        <Validation.ErrorTemplate>
-                            <ControlTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <!-- Placeholder for the TextBox itself -->
-                                    <AdornedElementPlaceholder x:Name="textBox"/>
-                                    <TextBlock Margin="10" Text="{Binding [0].ErrorContent}" Foreground="Red"/>
-                                </StackPanel>
-                            </ControlTemplate>
-                        </Validation.ErrorTemplate>
-                    </ListBox>
-                </GroupBox>
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Delete" Command="{Binding RemoveSourceFolder}"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right"                                            
+                                        Command="{Binding ElementName=SourceListBox, Path=DataContext.RemoveSourceFolder}">
+                                    <iconPacks:PackIconMaterial Kind="CloseBoxOutline"/>
+                                </Button>
+                                <Label Content="{Binding}"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <Validation.ErrorTemplate>
+                        <ControlTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <!-- Placeholder for the TextBox itself -->
+                                <AdornedElementPlaceholder x:Name="textBox"/>
+                                <TextBlock Margin="10" Text="{Binding [0].ErrorContent}" Foreground="Red"/>
+                            </StackPanel>
+                        </ControlTemplate>
+                    </Validation.ErrorTemplate>
+                </ListBox>
             </DockPanel>
             
         </GroupBox>
 
         <StackPanel Grid.Column="1">
-            <GroupBox DockPanel.Dock="Bottom" Header="Results"  >
+            <GroupBox DockPanel.Dock="Bottom" Header="Results" Padding="5,5,0,5" >
 
-                <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="3">
-                    <Label Content="Where would you like to save the results to?"/>
-                    <Button Content="Choose Destination Folder" Margin="5,0"
+                <DockPanel DockPanel.Dock="Top" >
+                    <Label DockPanel.Dock="Top" Content="Where would you like to save the results to?"/>
+                    <Button DockPanel.Dock="Right" Margin="5,0,0,0"
+                            Content="Browse" Style="{StaticResource DefaultButton}"
                         Command="{Binding ChooseDestinationFolderCommand, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}">
                         <Validation.ErrorTemplate>
                             <ControlTemplate>
@@ -70,11 +81,14 @@
                             </ControlTemplate>
                         </Validation.ErrorTemplate>
                     </Button>
-                </StackPanel>
+                    <TextBox Text="{Binding AnalysisOptions.DestinationDirectory}"/>
+                </DockPanel>
 
             </GroupBox>
-            <GroupBox Header="The Finer Details" Grid.Column="1" DataContext="{Binding AnalysisOptions}">
-                <StackPanel Margin="5,0" Grid.Column="1">
+            <GroupBox Header="The Finer Details" Grid.Column="1" 
+                      Padding="5,5,0,5"
+                      DataContext="{Binding AnalysisOptions}">
+                <StackPanel Grid.Column="1">
                     <Label Content="Should we permanently delete duplicates files?"/>
                     <StackPanel Orientation="Horizontal" Margin="3">
                         <RadioButton Content="Move to recycle bin"
@@ -117,7 +131,7 @@
                                      IsChecked="{Binding RunStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
                             ConverterParameter={x:Static analysis:RunStrategy.Normal}}"/>
-                        <RadioButton Content="Show me how it works with a dry run"
+                        <RadioButton Content="Run the Analysis but don't move my data"
                                      IsChecked="{Binding RunStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
                             ConverterParameter={x:Static analysis:RunStrategy.DryRun}}"/>

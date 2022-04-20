@@ -16,7 +16,6 @@
             <StackPanel>
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition/>
                         <RowDefinition/>
                     </Grid.RowDefinitions>
@@ -27,40 +26,40 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
+                    <Label Grid.Row="0" Grid.Column="0" Content="Files Analyzed"/>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                        <Label Content="{Binding AnalysisResults.NumberOfFiles}"/>
+                        <Label Content="/"/>
+                        <Label Content="{Binding AnalysisResults.FileCount}"/>
+                    </StackPanel>
+                    <Label Grid.Row="1" Grid.Column="0" Content="Data Analyzed"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                        <Label Content="{Binding AnalysisResults.TotalSize, Converter={converters:FileSizeFormatConverter}}" />
+                        <Label Content="/"/>
+                        <Label Content="{Binding AnalysisResults.SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
+                    </StackPanel>
 
-                    <Label Grid.Row="1" Grid.Column="0" Content="Files" x:Name="ColumnOne"/>
-                    <Label Grid.Row="1" Grid.Column="1" Content="{Binding AnalysisResults.FileCount}"/>
-                    <Label Grid.Row="2" Grid.Column="0" Content="Size on Disk"/>
-                    <Label Grid.Row="2" Grid.Column="1" 
-                           Content="{Binding AnalysisResults.SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
+                    <Label Grid.Row="0" Grid.Column="2" Content="Distinct"/>
+                    <Label Grid.Row="0" Grid.Column="3" Content="{Binding AnalysisResults.DistinctCount}"/>
+                    <Label Grid.Row="1" Grid.Column="2" Content="Size on Disk"/>
+                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
 
+                    <Label Grid.Row="0" Grid.Column="4" Content="Duplicates"/>
+                    <Label Grid.Row="0" Grid.Column="5" Content="{Binding AnalysisResults.DuplicateCount}"/>
+                    <Label Grid.Row="1" Grid.Column="4" Content="Size on Disk"/>
+                    <Label Grid.Row="1" Grid.Column="5" Content="{Binding AnalysisResults.DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
 
-                    <Label Grid.Row="1" Grid.Column="6" Content="Files Analyzed"/>
-                    <Label Grid.Row="1" Grid.Column="7" Content="{Binding AnalysisResults.NumberOfFiles}"/>
-                    <Label Grid.Row="2" Grid.Column="6" Content="Data Analyzed"/>
-                    <Label Grid.Row="2" Grid.Column="7" Content="{Binding AnalysisResults.TotalSize, Converter={converters:FileSizeFormatConverter}}" />
-
-                    <Label Grid.Row="1" Grid.Column="4" Content="Duplicates"/>
-                    <Label Grid.Row="1" Grid.Column="5" Content="{Binding AnalysisResults.DuplicateCount}"/>
-                    <Label Grid.Row="2" Grid.Column="4" Content="Size on Disk"/>
-                    <Label Grid.Row="2" Grid.Column="5" Content="{Binding AnalysisResults.DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
-
-                    <Label Grid.Row="1" Grid.Column="2" Content="Distinct"/>
-                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.DistinctCount}"/>
-                    <Label Grid.Row="2" Grid.Column="2" Content="Size on Disk"/>
-                    <Label Grid.Row="2" Grid.Column="3" Content="{Binding AnalysisResults.DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
+                    
 
                 </Grid>
                 <DockPanel>
-                    <Label Content="Run Time" Width="{Binding ElementName=ColumnOne, Path=ActualWidth}"
+                    <Label Content="Analysis Time" 
                            DockPanel.Dock="Left" />
                     <Label DockPanel.Dock="Left" Width="150" Content="{Binding RunTime}"/>
-                    <Grid DockPanel.Dock="Right" MinWidth="100">
-                        <Button Content="Cancel" 
+                    <Grid DockPanel.Dock="Right" >
+                        <Button Content="Cancel" Style="{StaticResource DefaultButton}"
                             Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
                             Command="{Binding CancelCommand}" />
                         <Label Content="{Binding ResultsLabel}" HorizontalAlignment="Center" VerticalAlignment="Center"

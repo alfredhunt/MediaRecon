@@ -65,7 +65,12 @@ namespace ApexBytez.MediaRecon.Analysis
                 CancelCommand.NotifyCanExecuteChanged();
             });
 
-
+            startTime = DateTime.Now;
+            var updateDisposable = Observable.Interval(TimeSpan.FromMilliseconds(42))
+                .Subscribe(async x =>
+                {
+                    await UpdateProgress();
+                });
 
             try
             {
@@ -88,6 +93,9 @@ namespace ApexBytez.MediaRecon.Analysis
                 //observableTimer.Dispose();
             }
 
+            updateDisposable.Dispose();
+            await UpdateProgress();
+
             // TODO: probably need to work on the statefulness of this processing and the UI elements
             //  visibility.
             Running = false;
@@ -99,5 +107,7 @@ namespace ApexBytez.MediaRecon.Analysis
             CanCancel = false;
             ShowResultsLabel = true;
         }
+
+        protected abstract Task UpdateProgress();
     }
 }

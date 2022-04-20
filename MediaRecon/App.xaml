@@ -37,6 +37,13 @@
                 <Setter Property="Margin" Value="3"/>
             </Style>
 
+            <Style x:Key="DefaultButton"
+                   BasedOn="{StaticResource MahApps.Styles.Button}"
+                   TargetType="{x:Type Button}" >
+                <Setter Property="MinWidth" Value="100"/>
+            </Style>
+                   
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
