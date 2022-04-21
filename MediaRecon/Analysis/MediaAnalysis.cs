@@ -1,4 +1,5 @@
-﻿using MethodTimer;
+﻿using ApexBytez.MediaRecon.DB;
+using MethodTimer;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -294,11 +295,69 @@ namespace ApexBytez.MediaRecon.Analysis
                     List<Tuple<byte[], FileInfo>> fileHashes = new List<Tuple<byte[], FileInfo>>();
                     foreach (var fileInfo in filesWithSameLength)
                     {
-                        byte[] hash;
-                        using (var fs = fileInfo.OpenRead())
+                        byte[] hash = null;
+
+                        using (var db = new MediaReconContext())
                         {
-                            hash = await SHA256.Create().ComputeHashAsync(fs, cancellationToken);
+                            // Note: This sample requires the database to be created before running.
+                            Console.WriteLine($"Database path: {db.DbPath}.");
+
+                            // TODO: we might need to make it easier to get a smaller list maybe by
+                            //  directory, relationally so searches are somewhat shorter for when this
+                            //  thing grows really big.
+
+                            // Does it exist?
+                            var file = db.Files.FirstOrDefault(x => 
+                                x.FullName.Equals(fileInfo.FullName) &&
+                                x.Length == fileInfo.Length &&
+                                x.LastWriteTime == fileInfo.LastWriteTime);
+
+                            if (file != null)
+                            {
+                                hash = file.Hash;
+                            }
                         }
+
+                        // If no hash was found, we need to hash and add the file
+                        if (hash == null)
+                        {
+                            using (var fs = fileInfo.OpenRead())
+                            {
+                                hash = await SHA256.Create().ComputeHashAsync(fs, cancellationToken);
+                            }
+
+                            // https://docs.microsoft.com/en-us/ef/core/get-started/overview/first-app?tabs=visual-studio
+                            try
+                            {
+                                using (var db = new MediaReconContext())
+                                {
+                                    // Note: This sample requires the database to be created before running.
+                                    Console.WriteLine($"Database path: {db.DbPath}.");
+
+                                    // Create
+                                    Console.WriteLine("Inserting a new file");
+                                    var newFile = new DB.File
+                                    {
+                                        CreationTime = fileInfo.CreationTime,
+                                        DirectoryName = fileInfo.DirectoryName,
+                                        FullName = fileInfo.FullName,
+                                        Hash = hash,
+                                        HashAlgorithm = "SHA256",
+                                        LastAccessTime = fileInfo.LastAccessTime,
+                                        LastWriteTime = fileInfo.LastWriteTime,
+                                        Length = fileInfo.Length,
+                                        Name = fileInfo.Name,
+                                    };
+                                    db.Add(newFile);
+                                    db.SaveChanges();
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine(ex.ToString());
+                            }
+                        }
+                        
                         fileHashes.Add(new Tuple<byte[], FileInfo>(hash, fileInfo));
                     }
                     var hashGroups = fileHashes.GroupBy(x => x.Item1, new ArrayComparer<byte>());
