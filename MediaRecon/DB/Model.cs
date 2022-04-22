@@ -114,7 +114,7 @@ namespace ApexBytez.MediaRecon.DB
                 {
                     // Note: This sample requires the database to be created before running.
                     Console.WriteLine($"Database path: {db.DbPath}.");
-                    db.Add(file);
+                    db.Update(file);
                     db.SaveChanges();
                 }
             }

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ApexBytez.MediaRecon.Migrations
 {
     [DbContext(typeof(MediaReconContext))]
-    [Migration("20220422003626_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20220422005234_Initial")]
+    partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
