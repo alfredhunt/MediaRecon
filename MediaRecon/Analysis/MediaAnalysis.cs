@@ -36,8 +36,14 @@ namespace ApexBytez.MediaRecon.Analysis
 
         protected override async Task RunAsyncStep()
         {
+            // We also need to evaluate our destination folder... that or 
+            //  we need to figure out some other method of handling conflicts
+            //  as we move data into it
+            var folders = AnalysisOptions.SourceFolders.ToList();
+            folders.Add(AnalysisOptions.DestinationDirectory);
+
             // This sorted list is binned on file name
-            var yearMonthSorted = FileAnalysis.GetYearMonthSortedFileInfo(AnalysisOptions.SourceFolders);
+            var yearMonthSorted = FileAnalysis.GetYearMonthSortedFileInfo(folders);
 
             IEnumerable<KeyValuePair<string, List<FileInfo>>>? flattened = yearMonthSorted.SelectMany(x => x.Value);
 
@@ -45,7 +51,7 @@ namespace ApexBytez.MediaRecon.Analysis
             AnalysisResults.SourceFoldersSize = flattened.Sum(x => x.Value.Sum(y => y.Length));
 
             List<FileInfo> distinct = new List<FileInfo>();
-            List<List<FileInfo>> duplicates = new ();
+            List<List<FileInfo>> duplicates = new();
 
             // Maybe use DateTime objects as keys instead of a string?
             //  otherwise we need to convert our string key here to a date time
@@ -80,7 +86,7 @@ namespace ApexBytez.MediaRecon.Analysis
                     });
                 }
 
-                foreach(var group in yearMonthSorted[key].Values)
+                foreach (var group in yearMonthSorted[key].Values)
                 {
                     if (group.Count == 1)
                     {
@@ -96,7 +102,7 @@ namespace ApexBytez.MediaRecon.Analysis
 
             // Continue to split this up so the progress is for the files being analyzed
             //  and not the ones that are quickly determined to be unique.
-            
+
             try
             {
                 foreach (var file in distinct)
@@ -118,7 +124,7 @@ namespace ApexBytez.MediaRecon.Analysis
                     async (fileList, ct) =>
                     {
                         Debug.Assert(fileList.Count() > 1);
-                        
+
                         var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList, ct);
 
                         if (bitwiseGoupings.Count() == 1)
@@ -175,18 +181,19 @@ namespace ApexBytez.MediaRecon.Analysis
                                 }
                             }
                         }
-                        
+
                     });
             }
             catch (OperationCanceledException ex)
             {
                 Debug.WriteLine(ex.Message);
-            }            
+            }
         }
 
         protected override Task UpdateProgress()
         {
-            return Task.Run(async () => {
+            return Task.Run(async () =>
+            {
                 var progressRatio = ((double)currentProgress.FilesProcessed / numFilesToAnalyze);
                 var percentageComplete = progressRatio * 100;
                 var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
@@ -295,76 +302,17 @@ namespace ApexBytez.MediaRecon.Analysis
                     List<Tuple<byte[], FileInfo>> fileHashes = new List<Tuple<byte[], FileInfo>>();
                     foreach (var fileInfo in filesWithSameLength)
                     {
-                        byte[] hash = null;
-
-                        using (var db = new MediaReconContext())
+                        try 
                         {
-                            // Note: This sample requires the database to be created before running.
-                            Console.WriteLine($"Database path: {db.DbPath}.");
-
-                            // TODO: we might need to make it easier to get a smaller list maybe by
-                            //  directory, relationally so searches are somewhat shorter for when this
-                            //  thing grows really big.
-
-                            // Does it exist?
-                            var file = db.Files.FirstOrDefault(x => 
-                                x.FullName.Equals(fileInfo.FullName) &&
-                                x.Length == fileInfo.Length &&
-                                x.LastWriteTime == fileInfo.LastWriteTime);
-
-                            if (file != null)
-                            {
-                                hash = file.Hash;
-                            }
+                            byte[] hash = await GetFileInfoHashAsync(fileInfo);
+                            fileHashes.Add(new Tuple<byte[], FileInfo>(hash, fileInfo));
                         }
-
-                        // If no hash was found, we need to hash and add the file
-                        if (hash == null)
+                        catch (Exception ex)
                         {
-                            using (var fs = fileInfo.OpenRead())
-                            {
-                                hash = await SHA256.Create().ComputeHashAsync(fs, cancellationToken);
-                            }
-
-                            // https://docs.microsoft.com/en-us/ef/core/get-started/overview/first-app?tabs=visual-studio
-                            try
-                            {
-                                using (var db = new MediaReconContext())
-                                {
-                                    // Note: This sample requires the database to be created before running.
-                                    Console.WriteLine($"Database path: {db.DbPath}.");
-
-                                    // Create
-                                    Console.WriteLine("Inserting a new file");
-                                    var newFile = new DB.File
-                                    {
-                                        CreationTime = fileInfo.CreationTime,
-                                        DirectoryName = fileInfo.DirectoryName,
-                                        FullName = fileInfo.FullName,
-                                        Hash = hash,
-                                        HashAlgorithm = "SHA256",
-                                        LastAccessTime = fileInfo.LastAccessTime,
-                                        LastWriteTime = fileInfo.LastWriteTime,
-                                        Length = fileInfo.Length,
-                                        Name = fileInfo.Name,
-                                    };
-                                    db.Add(newFile);
-                                    db.SaveChanges();
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.WriteLine(ex.ToString());
-                            }
+                            Debug.WriteLine(ex);
                         }
-                        
-                        fileHashes.Add(new Tuple<byte[], FileInfo>(hash, fileInfo));
                     }
                     var hashGroups = fileHashes.GroupBy(x => x.Item1, new ArrayComparer<byte>());
-                    //Debug.WriteLine("{0}: {1} files in {2} hash groups", 
-                    //    filesWithSameLength.First().Name,
-                    //    fileHashes.Count,
-                    //    hashGroups.Count());
                     foreach (var files in hashGroups)
                     {
                         IEnumerable<FileInfo>? filesPerHash = files.Select(x => x.Item2);
@@ -376,75 +324,24 @@ namespace ApexBytez.MediaRecon.Analysis
             return bitwiseGoupings;
         }
 
-        //protected async Task RunAsyncStepOriginal()
-        //{
+        [Time]
+        private async Task<byte[]> GetFileInfoHashAsync(FileInfo fileInfo)
+        {
+            Database database = new Database();
+            DB.File? file = database.GetDBFileInfo(fileInfo);
+            if (file == null)
+            {
+                byte[] hash = null;    
+                using (var fs = fileInfo.OpenRead())
+                {
+                    hash = await SHA256.Create().ComputeHashAsync(fs, cancellationToken);
+                }
+                file = database.AddDBFileInfo(fileInfo, hash);
+            }
+            return file.Hash;
+        }
 
-        //    var sortedFiles = FileAnalysis.GetSortedFileInfo(AnalysisOptions.SourceFolders);
-        //    AnalysisResults.FileCount = sortedFiles.Sum(x => x.Value.Count);
-        //    AnalysisResults.SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
-
-        //    _conflictResolutions = new Subject<ConflictedFiles>();
-        //    resolutionDisposable = _conflictResolutions
-        //        .Subscribe(x =>
-        //        {
-        //            Application.Current.Dispatcher.BeginInvoke(() =>
-        //            {
-        //                // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
-        //                // Would have to use a concurrent object if not observable
-        //                AnalysisResults.RenamedFiles.Add(x);
-        //            });
-        //        });
-
-        //    _reconciledFiles = new Subject<ReconciledFile>();
-        //    reconciledDisposable = _reconciledFiles
-        //        .Buffer(TimeSpan.FromMilliseconds(24))
-        //        .Where(x => x.Count > 0)
-        //        .Subscribe(x =>
-        //        {
-        //            ProcessReconciledFilesAsync(x);
-        //        });
-
-        //    try
-        //    {
-        //        await Parallel.ForEachAsync(sortedFiles,
-        //            new ParallelOptions { MaxDegreeOfParallelism = 1, CancellationToken = cancellationToken },
-        //            async (fileList, ct) =>
-        //            {
-        //                //StatusBarDescription = string.Format("Processing {0}", fileList.Value.First().FullName);
-
-        //                if (fileList.Value.Count() == 1)
-        //                {
-        //                    var uniqueFile = new UniqueFile(fileList.Value.First());
-        //                    _reconciledFiles.OnNext(uniqueFile);
-        //                }
-        //                // If 2+ items, we analyze
-        //                else if (fileList.Value.Count() > 1)
-        //                {
-        //                    var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList.Value, ct);
-        //                    if (bitwiseGoupings.Count() == 1)
-        //                    {
-        //                        var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
-        //                        _reconciledFiles.OnNext(duplicateFiles);
-        //                    }
-
-        //                    // If 2+, then we have files with the same name but different data and it gets a bit trickier
-        //                    else if (bitwiseGoupings.Count() > 1)
-        //                    {
-        //                        var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
-        //                        _conflictResolutions.OnNext(conflictedFiles);
-        //                        foreach (var file in conflictedFiles.ReconciledFiles)
-        //                        {
-        //                            _reconciledFiles.OnNext(file);
-        //                        }
-        //                    }
-        //                }
-        //            });
-        //    }
-        //    catch (OperationCanceledException ex)
-        //    {
-        //        Debug.WriteLine(ex.Message);
-        //    }
-        //}
+       
 
     }
 }

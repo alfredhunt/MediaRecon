@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +30,22 @@ namespace ApexBytez.MediaRecon.Extensions
 
             var exp = (int)(Math.Log(bytes) / Math.Log(unit));
             return $"{bytes / Math.Pow(unit, exp):F2} {("KMGTPE")[exp - 1]}B";
+        }
+    }
+
+    internal static class FileInfoExtensions
+    {
+        public static void Copy(this FileInfo fileInfo, string destination, bool overwrite)
+        {
+            File.Copy(fileInfo.FullName, destination, overwrite);
+        }
+        public static void Move(this FileInfo fileInfo, string destination, bool overwrite)
+        {
+            File.Move(fileInfo.FullName, destination, overwrite);
+        }
+        public static void Delete(this FileInfo fileInfo)
+        {
+            File.Delete(fileInfo.FullName);
         }
     }
 }

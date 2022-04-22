@@ -39,6 +39,7 @@ namespace ApexBytez.MediaRecon.View
         {
             if (listView.Items.Count > 0)
             {
+                // TODO: this kills the UI because the updates are not called on the update timer
                 listView.ScrollIntoView(listView.Items[listView.Items.Count - 1]);
             }
         }

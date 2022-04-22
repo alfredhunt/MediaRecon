@@ -4,8 +4,8 @@ namespace ApexBytez.MediaRecon.Analysis
 {
     public enum DeleteStrategy
     {
-        Soft, // Recycle bin
-        Hard, // Hard Delete
+        Recycle, // Recycle bin
+        Delete, // Hard Delete
     }
     public enum MoveStrategy
     {

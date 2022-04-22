@@ -94,11 +94,11 @@
                         <RadioButton Content="Move to recycle bin"
                                      IsChecked="{Binding DeleteStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static analysis:DeleteStrategy.Soft}}"/>
+                            ConverterParameter={x:Static analysis:DeleteStrategy.Recycle}}"/>
                         <RadioButton Content="Get rid of them" 
                                      IsChecked="{Binding DeleteStrategy, 
                             Converter={converters:EnumToBoolConverter}, 
-                            ConverterParameter={x:Static analysis:DeleteStrategy.Hard}}"/>
+                            ConverterParameter={x:Static analysis:DeleteStrategy.Delete}}"/>
                     </StackPanel>
 
                     <Label Content="Should we move or copy unique files?"/>

@@ -85,6 +85,7 @@ namespace ApexBytez.MediaRecon.Analysis
 
     internal abstract class ReconciledFile : FileRecon, IFolderViewItem
     {
+        public List<FileInfo> Files { get; protected set; } = new List<FileInfo>();
         public string Name { get; protected set; }
         public string FullName { get; protected set; }
         public DateTime LastWriteTime { get; protected set; }
@@ -103,11 +104,11 @@ namespace ApexBytez.MediaRecon.Analysis
 
     internal class UniqueFile : ReconciledFile
     {
-        public FileInfo File { get; set; }
+        public FileInfo File { get { return Files.First(); } }
 
         public UniqueFile(FileInfo file) : base(ReconType.Distinct)
         {
-            File = file;
+            Files.Add(file);
 
             Name = file.Name;
             FullName = file.FullName;
@@ -123,7 +124,6 @@ namespace ApexBytez.MediaRecon.Analysis
 
     internal class DuplicateFiles : ReconciledFile
     {
-        public IEnumerable<FileInfo> Files { get; private set; }
         public long TotalFileCount { get; private set; }
         public long TotalFileSystemSize { get; private set; }
         public long DuplicateFileSystemSize { get; private set; }
@@ -132,7 +132,7 @@ namespace ApexBytez.MediaRecon.Analysis
 
         public DuplicateFiles(IEnumerable<FileInfo> files) : base(ReconType.Duplicate)
         {
-            Files = files;
+            Files = files.ToList();
 
             Name = files.First().Name;
             FullName = files.First().FullName;
