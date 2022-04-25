@@ -40,7 +40,10 @@ namespace ApexBytez.MediaRecon.Analysis
             //  we need to figure out some other method of handling conflicts
             //  as we move data into it
             var folders = AnalysisOptions.SourceFolders.ToList();
-            folders.Add(AnalysisOptions.DestinationDirectory);
+            if (!folders.Contains(AnalysisOptions.DestinationDirectory))
+            {
+                folders.Add(AnalysisOptions.DestinationDirectory);
+            }
 
             // This sorted list is binned on file name
             var yearMonthSorted = FileAnalysis.GetYearMonthSortedFileInfo(folders);

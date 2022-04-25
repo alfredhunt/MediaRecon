@@ -73,10 +73,11 @@
                            DockPanel.Dock="Left" />
                     <Label DockPanel.Dock="Left" Width="150" Content="{Binding RunTime}"/>
                     <Grid DockPanel.Dock="Right">
-                        <Button Content="Cancel" Style="{StaticResource DefaultButton}"
+                        <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource DefaultButton}"
                             Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
                             Command="{Binding CancelCommand}" />
-                        <Label Content="{Binding ResultsLabel}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <Label Content="{Binding ResultsLabel}" Width="{Binding ElementName=CancelButton, Path=ActualWidth}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" HorizontalContentAlignment="Center"
                            Visibility="{Binding ShowResultsLabel, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </Grid>
                     <Grid Margin="3">
@@ -99,7 +100,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <GroupBox Header="Recycled" Grid.Column="0">
+            <GroupBox Header="{Binding AnalysisOptions.DeleteStrategy}" Grid.Column="0">
                 <ListView x:Name="RemovedItemsListView"
                       ItemsSource="{Binding ReconStats.RemovedItems}"
                       IsSynchronizedWithCurrentItem="True" >
@@ -111,9 +112,9 @@
                 </ListView>
             </GroupBox>
             <GridSplitter Grid.Column="1" Width="3"/>
-            <GroupBox Header="Reconciled" Grid.Column="2">
+            <GroupBox Header="{Binding AnalysisOptions.MoveStrategy}" Grid.Column="2">
                 <!--Could Look into some kind of treeview thing here for this-->
-                <ListView x:Name="SavedItemsListView"
+                <ListView x:Name="SavedItemsListView" 
                       ItemsSource="{Binding ReconStats.SavedItems}"
                       IsSynchronizedWithCurrentItem="True" >
                     <ListView.ItemsPanel>

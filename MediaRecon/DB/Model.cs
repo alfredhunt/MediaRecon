@@ -99,8 +99,10 @@ namespace ApexBytez.MediaRecon.DB
 
         public DB.File UpdateDBFileInfo(FileInfo oldInfo, FileInfo newInfo)
         {
+            // TODO: this probably needs to be addorupdate?
+
             DB.File? file = GetDBFileInfo(oldInfo);
-            if (file == null)
+            if (file != null)
             {
                 file.CreationTime = newInfo.CreationTime;
                 file.DirectoryName = newInfo.DirectoryName;

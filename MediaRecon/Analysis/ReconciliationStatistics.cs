@@ -19,5 +19,7 @@ namespace ApexBytez.MediaRecon.Analysis
         public long DistinctData { get => distinctData; set => SetProperty(ref distinctData, value); }
         public ObservableCollection<string> RemovedItems { get; set; } = new ObservableCollection<string>();
         public ObservableCollection<string> SavedItems { get; set; } = new ObservableCollection<string>();
+
+
     }
 }

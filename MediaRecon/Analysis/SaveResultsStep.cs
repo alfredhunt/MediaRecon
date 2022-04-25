@@ -31,6 +31,9 @@ namespace ApexBytez.MediaRecon.Analysis
         private ConcurrentQueue<string> moveCopyMessageQueue = new ();
         private ConcurrentQueue<string> recycleDeleteMessageQueue = new();
 
+        private Subject<string> moveCopyMessageSubject = new();
+        private Subject<string> recycleDeleteMessageSubject = new();
+
         public SaveResultsStep(AnalysisOptions analysisOptions, AnalysisResults analysisResults)
         {
             AnalysisOptions = analysisOptions;
@@ -44,6 +47,32 @@ namespace ApexBytez.MediaRecon.Analysis
             string logMessage = string.Empty;
             try
             {
+                var moveCopyMessageDisposable = moveCopyMessageSubject
+                    .Buffer(TimeSpan.FromMilliseconds(24))
+                    .Where(x => x.Any())
+                    .Subscribe(async x =>
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            foreach (var z in x)
+                                ReconStats.SavedItems.Add(z);
+                        });
+
+                    });
+
+                var recycleDeleteMessageDisposable = recycleDeleteMessageSubject
+                    .Buffer(TimeSpan.FromMilliseconds(24))
+                    .Where(x => x.Any())
+                    .Subscribe(async x =>
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            foreach (var z in x)
+                                ReconStats.RemovedItems.Add(z);
+                        });
+                    });
+
+
                 // Would possible be best if we could created all the directories first then really use
                 //  the power of parallel processing on the files in a flat list
                 // TODO: We should be able to have a list of directories from the initial parsing and 
@@ -66,7 +95,8 @@ namespace ApexBytez.MediaRecon.Analysis
                             logMessage = string.Format(yearDirExist ? formatFolderExist : formatFolderCreated, yearDir);
                             Application.Current.Dispatcher.Invoke(() =>
                             {
-                                ReconStats.SavedItems.Add(logMessage);
+                                //ReconStats.SavedItems.Add(logMessage);
+                                moveCopyMessageSubject.OnNext(logMessage);
                             });
 
                             foreach (var month in year.Items
@@ -84,7 +114,8 @@ namespace ApexBytez.MediaRecon.Analysis
                                 logMessage = string.Format(monthDirExist ? formatFolderExist : formatFolderCreated, monthDir);
                                 Application.Current.Dispatcher.Invoke(() =>
                                 {
-                                    ReconStats.SavedItems.Add(logMessage);
+                                    moveCopyMessageSubject.OnNext(logMessage);
+                                    //ReconStats.SavedItems.Add(logMessage);
                                 });
                             }
                         }
@@ -117,64 +148,71 @@ namespace ApexBytez.MediaRecon.Analysis
                               Debug.WriteLine(ex);
                           }
                       });
+
+                await Task.Delay(100);
             }
             catch (OperationCanceledException ex)
             {
                 Debug.WriteLine(ex.Message);
             }
         }
-        private async Task RecycleOrDeleteAsync(FileInfo file, CancellationToken cancellationToken)
+        private async Task RecycleOrDeleteAsync(FileInfo fileInfo, CancellationToken cancellationToken)
         {
+            var message = string.Empty;
             switch (AnalysisOptions.RunStrategy)
             {
                 case RunStrategy.Normal:
                     switch (AnalysisOptions.DeleteStrategy)
                     {
                         case DeleteStrategy.Recycle:
-                            if (!FileOperationAPIWrapper.MoveToRecycleBin(file.FullName))
+                            if (!FileOperationAPIWrapper.MoveToRecycleBin(fileInfo.FullName))
                             {
-                                Debug.WriteLine("Failed to recycle {0}", file.FullName); ;
+                                Debug.WriteLine("Failed to recycle {0}", fileInfo.FullName); ;
                             }
                             break;
                         case DeleteStrategy.Delete:
-                            file.Delete();
+                            fileInfo.Delete();
                             break;
                     }
 
-                    var message = string.Format("{0} {1}",
-                        AnalysisOptions.DeleteStrategy == DeleteStrategy.Recycle ? "Recycled" : "Delete",
-                        file.FullName);
-                    recycleDeleteMessageQueue.Enqueue(message);
-
-                    lock (tplLock)
-                    {
-                        currentProgress.FilesProcessed++;
-                        currentProgress.DataProcessed += file.Length;
-                        currentProgress.DuplicatesDeleted++;
-                        currentProgress.DuplicateData += file.Length;
-                    }
+                    message = string.Format("{0} {1}",
+                                AnalysisOptions.DeleteStrategy == DeleteStrategy.Recycle ? "Recycled" : "Delete",
+                                fileInfo.FullName);
                     break;
                 case RunStrategy.DryRun:
                     // Simulate some cost of copying or moving
                     await Task.Delay(Properties.Settings.Default.DryRunDelay, cancellationToken);
+                    message = string.Format("[Simulation] {0} {1}",
+                            AnalysisOptions.DeleteStrategy == DeleteStrategy.Recycle ? "Recycled" : "Delete",
+                            fileInfo.FullName);
                     break;
                 default:
                     // Shouldn't ever get here.
                     break;
             }
+
+            recycleDeleteMessageSubject.OnNext(message);
+
+            lock (tplLock)
+            {
+                currentProgress.FilesProcessed++;
+                currentProgress.DataProcessed += fileInfo.Length;
+                currentProgress.DuplicatesDeleted++;
+                currentProgress.DuplicateData += fileInfo.Length;
+            }
         }
 
         private async Task MoveOrCopyAsync(FileInfo fileInfo, string destination, CancellationToken cancellationToken)
         {
+            var message = string.Empty;
             switch (AnalysisOptions.RunStrategy)
             {
                 case RunStrategy.Normal:
 
                     if (fileInfo.FullName.Equals(destination))
                     {
-                        moveCopyMessageQueue.Enqueue(
-                            string.Format("{0} is already in the destination",
-                            fileInfo.FullName));
+                        message = string.Format("{0} is already in the destination",
+                            fileInfo.FullName);
                     }
                     else 
                     {
@@ -191,28 +229,34 @@ namespace ApexBytez.MediaRecon.Analysis
                         Database database = new Database();
                         database.UpdateDBFileInfo(fileInfo, new FileInfo(destination));
 
-                        var message = string.Format("{0} {1} to {2}",
+                        message = string.Format("{0} {1} to {2}",
                             AnalysisOptions.MoveStrategy == MoveStrategy.Move ? "Moved" : "Copied",
                             fileInfo.FullName,
                             destination);
-                        moveCopyMessageQueue.Enqueue(message);
-                    }
-
-                    lock (tplLock)
-                    {
-                        currentProgress.FilesProcessed++;
-                        currentProgress.DataProcessed += fileInfo.Length;
-                        currentProgress.DistinctSaved++;
-                        currentProgress.DistinctData += fileInfo.Length;
+                        
                     }
                     break;
                 case RunStrategy.DryRun:
                     // Simulate some cost of copying or moving
                     await Task.Delay(Properties.Settings.Default.DryRunDelay, cancellationToken);
+                    message = string.Format("[Simulation] {0} {1} to {2}",
+                            AnalysisOptions.MoveStrategy == MoveStrategy.Move ? "Moved" : "Copied",
+                            fileInfo.FullName,
+                            destination);
                     break;
                 default:
                     // Shouldn't ever get here.
                     break;
+            }
+
+            moveCopyMessageSubject.OnNext(message);
+
+            lock (tplLock)
+            {
+                currentProgress.FilesProcessed++;
+                currentProgress.DataProcessed += fileInfo.Length;
+                currentProgress.DistinctSaved++;
+                currentProgress.DistinctData += fileInfo.Length;
             }
         }
 
@@ -224,9 +268,6 @@ namespace ApexBytez.MediaRecon.Analysis
                 var percentageComplete = progressRatio * 100;
                 var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
                 var runTime = DateTime.Now - startTime;
-
-                var moveCopyCount = moveCopyMessageQueue.Count;
-                var recycleDeleteCount = recycleDeleteMessageQueue.Count;
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -240,26 +281,8 @@ namespace ApexBytez.MediaRecon.Analysis
                     ProgressPercentage = percentageComplete;
                     RunTime = runTime;
                 });
-
-                while (moveCopyCount > 0 || recycleDeleteCount > 0)
-                {
-                    if (moveCopyCount-- > 0 && moveCopyMessageQueue.TryDequeue(out string moveCopyMessage))
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            ReconStats.SavedItems.Add(moveCopyMessage);
-                        });
-                    }
-                    if (recycleDeleteCount-- > 0 && recycleDeleteMessageQueue.TryDequeue(out string recycleDeleteMessage))
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            ReconStats.SavedItems.Add(recycleDeleteMessage);
-                        });
-                    }
-                }
-
             });
         }
     }
+
 }

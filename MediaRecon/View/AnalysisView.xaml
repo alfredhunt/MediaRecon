@@ -41,17 +41,15 @@
                         <Label Content="{Binding AnalysisResults.SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
                     </StackPanel>
 
-                    <Label Grid.Row="0" Grid.Column="2" Content="Distinct"/>
-                    <Label Grid.Row="0" Grid.Column="3" Content="{Binding AnalysisResults.DistinctCount}"/>
+                    <Label Grid.Row="0" Grid.Column="2" Content="Duplicates"/>
+                    <Label Grid.Row="0" Grid.Column="3" Content="{Binding AnalysisResults.DuplicateCount}"/>
                     <Label Grid.Row="1" Grid.Column="2" Content="Size on Disk"/>
-                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
-
-                    <Label Grid.Row="0" Grid.Column="4" Content="Duplicates"/>
-                    <Label Grid.Row="0" Grid.Column="5" Content="{Binding AnalysisResults.DuplicateCount}"/>
-                    <Label Grid.Row="1" Grid.Column="4" Content="Size on Disk"/>
-                    <Label Grid.Row="1" Grid.Column="5" Content="{Binding AnalysisResults.DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
-
+                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
                     
+                    <Label Grid.Row="0" Grid.Column="4" Content="Distinct"/>
+                    <Label Grid.Row="0" Grid.Column="5" Content="{Binding AnalysisResults.DistinctCount}"/>
+                    <Label Grid.Row="1" Grid.Column="4" Content="Size on Disk"/>
+                    <Label Grid.Row="1" Grid.Column="5" Content="{Binding AnalysisResults.DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
 
                 </Grid>
                 <DockPanel>
@@ -59,10 +57,11 @@
                            DockPanel.Dock="Left" />
                     <Label DockPanel.Dock="Left" Width="150" Content="{Binding RunTime}"/>
                     <Grid DockPanel.Dock="Right" >
-                        <Button Content="Cancel" Style="{StaticResource DefaultButton}"
+                        <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource DefaultButton}"
                             Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}"
                             Command="{Binding CancelCommand}" />
-                        <Label Content="{Binding ResultsLabel}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <Label Content="{Binding ResultsLabel}" Width="{Binding ElementName=CancelButton, Path=ActualWidth}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
                            Visibility="{Binding ShowResultsLabel, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </Grid>
                     <Grid Margin="3">
