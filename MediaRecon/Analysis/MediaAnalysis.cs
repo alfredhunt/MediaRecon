@@ -46,7 +46,7 @@ namespace ApexBytez.MediaRecon.Analysis
             }
 
             // This sorted list is binned on file name
-            var yearMonthSorted = FileAnalysis.GetYearMonthSortedFileInfo(folders);
+            var yearMonthSorted = await FileAnalysis.GetYearMonthSortedFileInfo(folders, cancellationToken);
 
             IEnumerable<KeyValuePair<string, List<FileInfo>>>? flattened = yearMonthSorted.SelectMany(x => x.Value);
 
@@ -150,9 +150,12 @@ namespace ApexBytez.MediaRecon.Analysis
                         else if (bitwiseGoupings.Count() > 1)
                         {
                             var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
-                            // This isn't bound to UI so okay not to invoke
-                            AnalysisResults.RenamedFiles.Add(conflictedFiles);
-                            //_conflictResolutions.OnNext(conflictedFiles);
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                AnalysisResults.RenamedFiles.Add(conflictedFiles);
+                            });
+                            
                             foreach (var file in conflictedFiles.ReconciledFiles)
                             {
                                 switch (file.ReconType)
@@ -186,6 +189,8 @@ namespace ApexBytez.MediaRecon.Analysis
                         }
 
                     });
+
+                Debug.WriteLine("Done analysis");
             }
             catch (OperationCanceledException ex)
             {
@@ -327,11 +332,10 @@ namespace ApexBytez.MediaRecon.Analysis
             return bitwiseGoupings;
         }
 
-        [Time]
         private async Task<byte[]> GetFileInfoHashAsync(FileInfo fileInfo)
         {
             Database database = new Database();
-            DB.File? file = database.GetDBFileInfo(fileInfo);
+            DB.File? file = await database.GetDBFileInfoAsync(fileInfo);
             if (file == null)
             {
                 byte[] hash = null;    
@@ -339,7 +343,7 @@ namespace ApexBytez.MediaRecon.Analysis
                 {
                     hash = await SHA256.Create().ComputeHashAsync(fs, cancellationToken);
                 }
-                file = database.AddDBFileInfo(fileInfo, hash);
+                file = await database.AddDBFileInfoAsync(fileInfo, hash);
             }
             return file.Hash;
         }

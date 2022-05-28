@@ -1,5 +1,6 @@
 ﻿using ApexBytez.MediaRecon.View;
 using Microsoft.Toolkit.Mvvm.ComponentModel;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -24,7 +25,7 @@ namespace ApexBytez.MediaRecon.Analysis
         public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
         public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
         public ObservableCollection<IFolderViewItem> ReconciledDirectories { get; set; } = new ObservableCollection<IFolderViewItem>();
-        public List<ReconciledFile> ReconciledFiles { get; private set; } = new List<ReconciledFile>();
+        public ConcurrentBag<ReconciledFile> ReconciledFiles { get; private set; } = new ConcurrentBag<ReconciledFile>();
         public ObservableCollection<ConflictedFiles> RenamedFiles { get; private set; } = new ObservableCollection<ConflictedFiles>();
         public long FilesProcessed { get; internal set; }
     }

@@ -28,16 +28,18 @@ namespace ApexBytez.MediaRecon.Analysis
 
         private object tplLock = new object();
 
-        private ConcurrentQueue<string> moveCopyMessageQueue = new ();
-        private ConcurrentQueue<string> recycleDeleteMessageQueue = new();
-
-        private Subject<string> moveCopyMessageSubject = new();
-        private Subject<string> recycleDeleteMessageSubject = new();
+        private Subject<Tuple<Reconciled, string>> messageSubject = new();
 
         public SaveResultsStep(AnalysisOptions analysisOptions, AnalysisResults analysisResults)
         {
             AnalysisOptions = analysisOptions;
             AnalysisResults = analysisResults;
+        }
+
+        private enum Reconciled
+        {
+            Saved,
+            Removed
         }
 
         protected override async Task RunAsyncStep()
@@ -47,29 +49,42 @@ namespace ApexBytez.MediaRecon.Analysis
             string logMessage = string.Empty;
             try
             {
-                var moveCopyMessageDisposable = moveCopyMessageSubject
-                    .Buffer(TimeSpan.FromMilliseconds(24))
+                var previous = DateTime.Now;
+                var messageDisposable = messageSubject
+                    .Buffer(TimeSpan.FromMilliseconds(150))
                     .Where(x => x.Any())
                     .Subscribe(async x =>
                     {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            foreach (var z in x)
-                                ReconStats.SavedItems.Add(z);
-                        });
+                        var now = DateTime.Now;
+                        var delta = (now - previous).TotalMilliseconds;
+                        previous = now;
 
-                    });
-
-                var recycleDeleteMessageDisposable = recycleDeleteMessageSubject
-                    .Buffer(TimeSpan.FromMilliseconds(24))
-                    .Where(x => x.Any())
-                    .Subscribe(async x =>
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        foreach (var z in x)
                         {
-                            foreach (var z in x)
-                                ReconStats.RemovedItems.Add(z);
-                        });
+                            switch (z.Item1)
+                            {
+                                case Reconciled.Saved:
+                                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                                    {
+                                        if (ReconStats.SavedItems.Count > 200)
+                                        {
+                                            ReconStats.SavedItems.RemoveAt(0);
+                                        }
+                                        ReconStats.SavedItems.Add(z.Item2);
+                                    });
+                                    break;
+                                case Reconciled.Removed:
+                                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                                    {
+                                        if (ReconStats.RemovedItems.Count > 200)
+                                        {
+                                            ReconStats.RemovedItems.RemoveAt(0);
+                                        }
+                                        ReconStats.RemovedItems.Add(z.Item2);
+                                    });
+                                    break;
+                            }
+                        }
                     });
 
 
@@ -95,8 +110,7 @@ namespace ApexBytez.MediaRecon.Analysis
                             logMessage = string.Format(yearDirExist ? formatFolderExist : formatFolderCreated, yearDir);
                             Application.Current.Dispatcher.Invoke(() =>
                             {
-                                //ReconStats.SavedItems.Add(logMessage);
-                                moveCopyMessageSubject.OnNext(logMessage);
+                                messageSubject.OnNext(new Tuple<Reconciled, string>(Reconciled.Saved, logMessage));
                             });
 
                             foreach (var month in year.Items
@@ -114,8 +128,7 @@ namespace ApexBytez.MediaRecon.Analysis
                                 logMessage = string.Format(monthDirExist ? formatFolderExist : formatFolderCreated, monthDir);
                                 Application.Current.Dispatcher.Invoke(() =>
                                 {
-                                    moveCopyMessageSubject.OnNext(logMessage);
-                                    //ReconStats.SavedItems.Add(logMessage);
+                                    messageSubject.OnNext(new Tuple<Reconciled, string>(Reconciled.Saved, logMessage));
                                 });
                             }
                         }
@@ -131,25 +144,62 @@ namespace ApexBytez.MediaRecon.Analysis
                       {
                           try
                           {
-                              // TODO: Consider removing copy or at least warn since it makes the problem worse
-                              // Move/Copy One
-                              await MoveOrCopyAsync(file.Files.First(), file.ReconciledFilePath, cancellationToken);
+                              // Do any of the files already exist in the destination? Keep it, delete the others
+                              var destinationFile = file.Files.FirstOrDefault(x => x.FullName == file.ReconciledFilePath);
 
-                              // Recycle/Delete the rest
-                              foreach (var item in file.Files.Skip(1))
+                              if (destinationFile != null)
                               {
-                                  // TODO: do we want or need to produce a list of all files remove?
-                                  // Might be a good idea
-                                  await RecycleOrDeleteAsync(item, cancellationToken);
+                                  // The file already exists in the destination
+                                  // Remove the other copies
+                                  var message = string.Format("Unique file already exists in destination: {0}", file.ReconciledFilePath);
+                                  //Debug.WriteLine();
+                                  messageSubject.OnNext(new Tuple<Reconciled, string>(Reconciled.Saved, message));
+                                                                    
+                                  file.Files.Remove(destinationFile);
+                                  await Task.Delay(Properties.Settings.Default.DryRunDelay, cancellationToken);
+                                  lock (tplLock)
+                                  {
+                                      currentProgress.FilesProcessed++;
+                                      currentProgress.DataProcessed += destinationFile.Length;
+                                      currentProgress.DistinctSaved++;
+                                      currentProgress.DistinctData += destinationFile.Length;
+                                  }
+
+                                  // Recycle/Delete the rest
+                                  foreach (var item in file.Files)
+                                  {
+                                      await RecycleOrDeleteAsync(item, cancellationToken);
+                                  }
+                              }
+                              else
+                              {
+                                  // Copy will have the effect of copying one, removing all others
+                                  //    This effect will be at random and probably doesn't make 
+                                  //    much sense to have a copy strategy at all.
+
+                                  // Move/Copy One
+                                  await MoveOrCopyAsync(file.Files.First(), file.ReconciledFilePath, cancellationToken);
+
+                                  // Recycle/Delete the rest
+                                  foreach (var item in file.Files.Skip(1))
+                                  {
+                                      // TODO: do we want or need to produce a list of all files remove?
+                                      // Might be a good idea
+                                      await RecycleOrDeleteAsync(item, cancellationToken);
+                                  }
                               }
                           }
                           catch (Exception ex)
                           {
-                              Debug.WriteLine(ex);
+                              Debug.WriteLine("Parallel.ForEachAsync: {0}", ex);
                           }
                       });
 
-                await Task.Delay(100);
+                //await Task.Delay(TimeSpan.FromSeconds(1));
+                messageDisposable.Dispose();
+                await UpdateProgress();
+
+                
             }
             catch (OperationCanceledException ex)
             {
@@ -165,13 +215,16 @@ namespace ApexBytez.MediaRecon.Analysis
                     switch (AnalysisOptions.DeleteStrategy)
                     {
                         case DeleteStrategy.Recycle:
-                            if (!FileOperationAPIWrapper.MoveToRecycleBin(fileInfo.FullName))
+                            await Task.Run(() =>
                             {
-                                Debug.WriteLine("Failed to recycle {0}", fileInfo.FullName); ;
-                            }
+                                if (!FileOperationAPIWrapper.MoveToRecycleBin(fileInfo.FullName))
+                                {
+                                    Debug.WriteLine("Failed to recycle {0}", fileInfo.FullName); ;
+                                }
+                            });
                             break;
                         case DeleteStrategy.Delete:
-                            fileInfo.Delete();
+                            await Task.Run(() => fileInfo.Delete());
                             break;
                     }
 
@@ -191,8 +244,6 @@ namespace ApexBytez.MediaRecon.Analysis
                     break;
             }
 
-            recycleDeleteMessageSubject.OnNext(message);
-
             lock (tplLock)
             {
                 currentProgress.FilesProcessed++;
@@ -200,6 +251,8 @@ namespace ApexBytez.MediaRecon.Analysis
                 currentProgress.DuplicatesDeleted++;
                 currentProgress.DuplicateData += fileInfo.Length;
             }
+
+            messageSubject.OnNext(new Tuple<Reconciled, string>(Reconciled.Removed, message));
         }
 
         private async Task MoveOrCopyAsync(FileInfo fileInfo, string destination, CancellationToken cancellationToken)
@@ -214,26 +267,26 @@ namespace ApexBytez.MediaRecon.Analysis
                         message = string.Format("{0} is already in the destination",
                             fileInfo.FullName);
                     }
-                    else 
+                    else
                     {
                         switch (AnalysisOptions.MoveStrategy)
                         {
                             case MoveStrategy.Copy:
-                                fileInfo.Copy(destination, false);
+                                await Task.Run(() => fileInfo.Copy(destination, false));
                                 break;
                             case MoveStrategy.Move:
-                                fileInfo.Move(destination, false);
+                                await Task.Run(() => fileInfo.Move(destination, false));
                                 break;
                         }
 
                         Database database = new Database();
-                        database.UpdateDBFileInfo(fileInfo, new FileInfo(destination));
+                        await database.UpdateDBFileInfoAsync(fileInfo, new FileInfo(destination));
 
                         message = string.Format("{0} {1} to {2}",
                             AnalysisOptions.MoveStrategy == MoveStrategy.Move ? "Moved" : "Copied",
                             fileInfo.FullName,
                             destination);
-                        
+
                     }
                     break;
                 case RunStrategy.DryRun:
@@ -249,8 +302,6 @@ namespace ApexBytez.MediaRecon.Analysis
                     break;
             }
 
-            moveCopyMessageSubject.OnNext(message);
-
             lock (tplLock)
             {
                 currentProgress.FilesProcessed++;
@@ -258,6 +309,8 @@ namespace ApexBytez.MediaRecon.Analysis
                 currentProgress.DistinctSaved++;
                 currentProgress.DistinctData += fileInfo.Length;
             }
+
+            messageSubject.OnNext(new Tuple<Reconciled, string>(Reconciled.Saved, message));
         }
 
         protected override Task UpdateProgress()

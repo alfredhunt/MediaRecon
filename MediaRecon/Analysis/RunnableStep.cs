@@ -51,61 +51,73 @@ namespace ApexBytez.MediaRecon.Analysis
         {
             await RunAsync(RunAsyncStep);
         }
-        protected async Task RunAsync(Func<Task> asyncTask)
+        protected Task RunAsync(Func<Task> asyncTask)
         {
-            cancellationTokenSource = new CancellationTokenSource();
-            cancellationToken = cancellationTokenSource.Token;
-            ProgressBarValue = 0;
-            ProgressBarMaximum = Properties.Settings.Default.ProgressBarMaximum;
-            RunTime = TimeSpan.Zero;
-            Running = true;
-
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            return Task.Run(async () =>
             {
-                CancelCommand.NotifyCanExecuteChanged();
-            });
+                cancellationTokenSource = new CancellationTokenSource();
+                cancellationToken = cancellationTokenSource.Token;
+                ProgressBarValue = 0;
+                ProgressBarMaximum = Properties.Settings.Default.ProgressBarMaximum;
+                RunTime = TimeSpan.Zero;
+                Running = true;
 
-            startTime = DateTime.Now;
-            var updateDisposable = Observable.Interval(TimeSpan.FromMilliseconds(42))
-                .Subscribe(async x =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    await UpdateProgress();
+                    CancelCommand.NotifyCanExecuteChanged();
                 });
 
-            try
-            {
-                // TODO: pass the cancellation token in so it's clear that it's being used.
-                await asyncTask();
-                ResultsLabel = "Done!";
-            }
-            catch (OperationCanceledException ex)
-            {
-                Debug.WriteLine(ex.Message);
-                ResultsLabel = "Cancelled";
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-                ResultsLabel = "Error";
-            }
-            finally
-            {
-                //observableTimer.Dispose();
-            }
+                startTime = DateTime.Now;
+                var previous = startTime;
+                var updateDisposable = Observable.Timer(TimeSpan.Zero, TimeSpan.FromMilliseconds(50))
+                    .TimeInterval()
+                    .Subscribe(async x =>
+                    {
+                        var now = DateTime.Now;
+                        var delta = (now - previous).TotalMilliseconds;
+                        previous = now;
+                        //Debug.WriteLine("UpdateProgress : {0}", delta);
+                        
+                        await UpdateProgress();
+                    });
 
-            updateDisposable.Dispose();
-            await UpdateProgress();
+                try
+                {
+                    // TODO: pass the cancellation token in so it's clear that it's being used.
+                    await asyncTask();
+                    ResultsLabel = "Done!";
+                }
+                catch (OperationCanceledException ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                    ResultsLabel = "Cancelled";
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                    ResultsLabel = "Error";
+                }
+                finally
+                {
+                    //observableTimer.Dispose();
+                }
 
-            // TODO: probably need to work on the statefulness of this processing and the UI elements
-            //  visibility.
-            Running = false;
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                CancelCommand.NotifyCanExecuteChanged();
+                updateDisposable.Dispose();
+                await UpdateProgress();
+
+                // TODO: probably need to work on the statefulness of this processing and the UI elements
+                //  visibility.
+                Running = false;
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    CancelCommand.NotifyCanExecuteChanged();
+                });
+                Debug.Assert(!CanCancel);
+                CanCancel = false;
+                ShowResultsLabel = true;
             });
-            Debug.Assert(!CanCancel);
-            CanCancel = false;
-            ShowResultsLabel = true;
+
+            
         }
 
         protected abstract Task UpdateProgress();

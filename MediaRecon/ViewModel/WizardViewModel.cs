@@ -24,7 +24,7 @@ namespace ApexBytez.MediaRecon.ViewModel
 
         private void Close()
         {
-            
+            Debug.WriteLine("WizardViewModel.Close()");
         }
     }
 }

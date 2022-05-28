@@ -15,37 +15,38 @@
 
     <controls:Wizard FinishCommand="{Binding CloseCommand}" 
                      SharedContext="{Binding SharedContext}" 
+                     UseCircularNavigation="True"
                      NavigationBlockMinHeight="50">
         <controls:WizardStep ViewType="{x:Type view:WelcomeView}" 
                              SkipButtonIsEnabled="False" 
                              SkipButtonVisibility="Collapsed"
-                             ForwardButtonTitle="Setup" 
+                             ForwardButtonTitle="Start New Analysis" 
+                             ForwardButtonWidth="200"
                              BackButtonVisibility="Collapsed" />
         <controls:WizardStep ViewType="{x:Type view:SetupView}" 
                              SkipButtonIsEnabled="False" 
                              SkipButtonVisibility="Collapsed"
-                             BackButtonTitle="Intro"
-                             BackButtonWidth="100"
-                             ForwardButtonTitle="Analyze"
+                             ForwardButtonWidth="200"
+                             ForwardButtonTitle="Perform Analysis"
                              ForwardButtonIsEnabled="{Binding UnderlyingDataContext.ForwardButtonIsEnabled, RelativeSource={RelativeSource Self}}"/>
         <controls:WizardStep ViewType="{x:Type view:AnalysisView}" 
                              SkipButtonIsEnabled="False" 
                              SkipButtonVisibility="Collapsed"
-                             BackButtonTitle="Setup"
-                             BackButtonWidth="100"
-                             ForwardButtonTitle="Review Changes" 
-                             ForwardButtonIsEnabled="{Binding UnderlyingDataContext.ForwardButtonIsEnabled, RelativeSource={RelativeSource Self}}"/>
+                             ForwardButtonWidth="200"
+                             ForwardButtonTitle="Preview Reconciliation" 
+                             ForwardButtonIsEnabled="{Binding UnderlyingDataContext.ForwardButtonIsEnabled, RelativeSource={RelativeSource Self}}"
+                             BackButtonIsEnabled="{Binding UnderlyingDataContext.BackButtonIsEnabled, RelativeSource={RelativeSource Self}}"/>
         <controls:WizardStep ViewType="{x:Type view:ReviewView}" 
                              SkipButtonIsEnabled="False" 
                              SkipButtonVisibility="Collapsed"
-                             BackButtonTitle="Analysis"
-                             BackButtonWidth="100"
-                             ForwardButtonTitle="Save Results" />
+                             ForwardButtonWidth="200"
+                             ForwardButtonTitle="Perform Reconciliation" />
         <controls:WizardStep ViewType="{x:Type view:SaveView}" 
                              SkipButtonIsEnabled="False" 
                              SkipButtonVisibility="Collapsed"
-                             BackButtonTitle="Review"
-                             BackButtonWidth="100"
-                             ForwardButtonTitle="Done" />
+                             ForwardButtonWidth="200"
+                             ForwardButtonTitle="Finished"
+                             ForwardButtonIsEnabled="{Binding UnderlyingDataContext.ForwardButtonIsEnabled, RelativeSource={RelativeSource Self}}"
+                             BackButtonIsEnabled="{Binding UnderlyingDataContext.BackButtonIsEnabled, RelativeSource={RelativeSource Self}}"/>
     </controls:Wizard>
 </UserControl>

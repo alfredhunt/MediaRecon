@@ -19,6 +19,8 @@ namespace ApexBytez.MediaRecon.ViewModel
                 return;
             }
 
+            transitionContext.SharedContext.Clear();
+
             // Save data here
             await Task.Delay(0);
         }

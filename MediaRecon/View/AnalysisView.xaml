@@ -5,14 +5,109 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ApexBytez.MediaRecon.View" 
              xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" 
+             xmlns:analysis="clr-namespace:ApexBytez.MediaRecon.Analysis"
              xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              d:DataContext="{d:DesignInstance Type=viewmodel:AnalysisViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
+    <UserControl.Resources>
+
+        <DataTemplate DataType="{x:Type analysis:UniqueFile}">
+            <GroupBox Header="{Binding Name}">
+                <TextBlock Text="{Binding Path}" />
+            </GroupBox>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type analysis:DuplicateFiles}">
+            <Expander>
+                <Expander.Header>
+                    <DockPanel HorizontalAlignment="Stretch">
+                        <Label DockPanel.Dock="Right" Content="Duplicate Files"/>
+                        <TextBlock Text="{Binding Name}"/>
+                    </DockPanel>
+                </Expander.Header>
+                <ListView ItemsSource="{Binding Files}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="{x:Type ListViewItem}">
+                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </Expander>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type analysis:ConflictedFiles}">
+            <Expander>
+                <Expander.Header>
+                    <DockPanel>
+                        <TextBlock Text="{Binding Description}"/>
+                    </DockPanel>
+                </Expander.Header>
+                <ListView ItemsSource="{Binding ReconciledFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+
+                    <ListView.Resources>
+                        <DataTemplate DataType="{x:Type analysis:UniqueFile}">
+                            <GroupBox Header="Unique">
+                                <StackPanel HorizontalAlignment="Left">
+                                    <Image Source="{Binding FullName}" Width="300"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Label Content="Renamed: "/>
+                                        <Label Content="{Binding Name}"/>
+                                        <Label Content="{Binding FullName}"/>
+                                        <Label Content="{Binding Size}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                            </GroupBox>
+                        </DataTemplate>
+
+                        <DataTemplate DataType="{x:Type analysis:DuplicateFiles}">
+                            <GroupBox>
+                                <GroupBox.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </StackPanel>
+
+                                </GroupBox.Header>
+
+                                <ListView ItemsSource="{Binding Files}" >
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="{x:Type ListViewItem}">
+                                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <Image Source="{Binding FullName}" Width="300"/>
+                                                <TextBlock Text="{Binding FullName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                    <ListView.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <VirtualizingStackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListView.ItemsPanel>
+                                </ListView>
+
+                            </GroupBox>
+                        </DataTemplate>
+                    </ListView.Resources>
+                </ListView>
+            </Expander>
+        </DataTemplate>
+
+    </UserControl.Resources>
 
     <DockPanel DataContext="{Binding Analysis}">
-        <GroupBox Header="Analysis" DockPanel.Dock="Top">
+        <GroupBox Header="Performing Analysis" DockPanel.Dock="Top">
             <StackPanel>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -76,10 +171,16 @@
                 </DockPanel>
             </StackPanel>
         </GroupBox>
-        
 
-        <GroupBox Header="Reconciled Data" >
-            <local:FolderView ItemsSource="{Binding AnalysisResults.ReconciledDirectories}" ViewStyle="List"/>
+
+        <GroupBox Header="Data Conflict Resolutions" >
+            <ListView ItemsSource="{Binding AnalysisResults.RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel Orientation="Vertical"/>
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+            </ListView>
         </GroupBox>
 
     </DockPanel>

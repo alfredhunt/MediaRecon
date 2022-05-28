@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApexBytez.MediaRecon.DB
@@ -56,7 +57,7 @@ namespace ApexBytez.MediaRecon.DB
 
     public class Database
     {
-        public DB.File? GetDBFileInfo(FileInfo fileInfo)
+        public async Task<File?> GetDBFileInfoAsync(FileInfo fileInfo)
         {
             //
             // https://docs.microsoft.com/en-us/ef/core/get-started/overview/first-app?tabs=visual-studio
@@ -64,14 +65,14 @@ namespace ApexBytez.MediaRecon.DB
             using (var db = new MediaReconContext())
             {
                 // Does it exist?
-                return db.Files.FirstOrDefault(x =>
+                return await db.Files.FirstOrDefaultAsync(x =>
                     x.FullName.Equals(fileInfo.FullName) &&
                     x.Length == fileInfo.Length &&
                     x.LastWriteTime == fileInfo.LastWriteTime);
             }
         }
 
-        public DB.File AddDBFileInfo(FileInfo fileInfo, byte[] hash)
+        public async Task<File> AddDBFileInfoAsync(FileInfo fileInfo, byte[] hash)
         {
             var file = new DB.File
             {
@@ -91,17 +92,17 @@ namespace ApexBytez.MediaRecon.DB
                 // Note: This sample requires the database to be created before running.
                 Console.WriteLine($"Database path: {db.DbPath}.");
                 db.Add(file);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
             }
 
             return file;
         }
 
-        public DB.File UpdateDBFileInfo(FileInfo oldInfo, FileInfo newInfo)
+        public async Task<File> UpdateDBFileInfoAsync(FileInfo oldInfo, FileInfo newInfo)
         {
             // TODO: this probably needs to be addorupdate?
 
-            DB.File? file = GetDBFileInfo(oldInfo);
+            DB.File? file = await GetDBFileInfoAsync(oldInfo);
             if (file != null)
             {
                 file.CreationTime = newInfo.CreationTime;
@@ -117,7 +118,7 @@ namespace ApexBytez.MediaRecon.DB
                     // Note: This sample requires the database to be created before running.
                     Console.WriteLine($"Database path: {db.DbPath}.");
                     db.Update(file);
-                    db.SaveChanges();
+                    await db.SaveChangesAsync();
                 }
             }
             else

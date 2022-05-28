@@ -3,117 +3,54 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:analysis="clr-namespace:ApexBytez.MediaRecon.Analysis"
              xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
+             xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" 
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    
-    <UserControl.Resources>
-        
-        <DataTemplate DataType="{x:Type analysis:UniqueFile}">
-            <GroupBox Header="{Binding Name}">
-                <TextBlock Text="{Binding Path}" />
-            </GroupBox>
-        </DataTemplate>
 
-        <DataTemplate DataType="{x:Type analysis:DuplicateFiles}">
-            <Expander>
-                <Expander.Header>
-                    <DockPanel HorizontalAlignment="Stretch">
-                        <Label DockPanel.Dock="Right" Content="Duplicate Files"/>
-                        <TextBlock Text="{Binding Name}"/>
-                    </DockPanel>
-                </Expander.Header>
-                <ListView ItemsSource="{Binding Files}">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="{x:Type ListViewItem}">
-                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                </ListView>
-            </Expander>
-        </DataTemplate>
-        
-        <DataTemplate DataType="{x:Type analysis:ConflictedFiles}">
-            <Expander>
-                <Expander.Header>
-                    <DockPanel>
-                        <TextBlock Text="{Binding Description}"/>
-                    </DockPanel>
-                </Expander.Header>
-                <ListView ItemsSource="{Binding ReconciledFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <VirtualizingStackPanel Orientation="Vertical"/>
-                        </ItemsPanelTemplate>
-                    </ListView.ItemsPanel>
-
-                    <ListView.Resources>
-                        <DataTemplate DataType="{x:Type analysis:UniqueFile}">
-                            <GroupBox Header="Unique">
-                                <StackPanel HorizontalAlignment="Left">
-                                    <Image Source="{Binding FullName}" Width="300"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Label Content="Renamed: "/>
-                                        <Label Content="{Binding Name}"/>
-                                        <Label Content="{Binding FullName}"/>
-                                        <Label Content="{Binding Size}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                                
-                            </GroupBox>
-                        </DataTemplate>
-
-                        <DataTemplate DataType="{x:Type analysis:DuplicateFiles}">
-                            <GroupBox>
-                                <GroupBox.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}"/>
-                                    </StackPanel>
-
-                                </GroupBox.Header>
-
-                                <ListView ItemsSource="{Binding Files}" >
-                                    <ListView.ItemContainerStyle>
-                                        <Style TargetType="{x:Type ListViewItem}">
-                                            <EventSetter Event="MouseDoubleClick" Handler="DuplicateFiles_MouseDoubleClick"/>
-                                        </Style>
-                                    </ListView.ItemContainerStyle>
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel>
-                                                <Image Source="{Binding FullName}" Width="300"/>
-                                                <TextBlock Text="{Binding FullName}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                    <ListView.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <VirtualizingStackPanel Orientation="Horizontal"/>
-                                        </ItemsPanelTemplate>
-                                    </ListView.ItemsPanel>
-                                </ListView>
-
-                            </GroupBox>
-                        </DataTemplate>
-                    </ListView.Resources>
-                </ListView>
-            </Expander>
-        </DataTemplate>
-        
-    </UserControl.Resources>
-    
-    
     <DockPanel>
-        <Label DockPanel.Dock="Top" Content="Review and update automatic renamings before saving your results"/>
-        <GroupBox Margin="2" Header="Renamed Files">
-            <ListView ItemsSource="{Binding AnalysisResults.RenamedFiles}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ListView.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <VirtualizingStackPanel Orientation="Vertical"/>
-                    </ItemsPanelTemplate>
-                </ListView.ItemsPanel>
-            </ListView>
+        <!--<Label DockPanel.Dock="Top" Content="Review reconciled data"/>-->
+        <GroupBox Header="Analysis Results" 
+                  DockPanel.Dock="Top">
+            <StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.Row="0" Grid.Column="0" Content="Files Analyzed"/>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                        <Label Content="{Binding AnalysisResults.NumberOfFiles}"/>
+                    </StackPanel>
+                    <Label Grid.Row="1" Grid.Column="0" Content="Data Analyzed"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                        <Label Content="{Binding AnalysisResults.TotalSize, Converter={converters:FileSizeFormatConverter}}" />
+                    </StackPanel>
+
+                    <Label Grid.Row="0" Grid.Column="2" Content="Duplicates"/>
+                    <Label Grid.Row="0" Grid.Column="3" Content="{Binding AnalysisResults.DuplicateCount}"/>
+                    <Label Grid.Row="1" Grid.Column="2" Content="Size on Disk"/>
+                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
+
+                    <Label Grid.Row="0" Grid.Column="4" Content="Distinct"/>
+                    <Label Grid.Row="0" Grid.Column="5" Content="{Binding AnalysisResults.DistinctCount}"/>
+                    <Label Grid.Row="1" Grid.Column="4" Content="Size on Disk"/>
+                    <Label Grid.Row="1" Grid.Column="5" Content="{Binding AnalysisResults.DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
+
+                </Grid>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Margin="2" Header="Reconciliation Preview">
+            <local:FolderView ItemsSource="{Binding AnalysisResults.ReconciledDirectories}" ViewStyle="List"/>
         </GroupBox>
     </DockPanel>
 </UserControl>

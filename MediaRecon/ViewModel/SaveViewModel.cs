@@ -14,32 +14,15 @@ using ApexBytez.MediaRecon.Analysis;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
-    internal class SaveViewModel : StepViewModelBase
+    internal class SaveViewModel : WizardStepViewModel
     {
-        public bool forwardButtonIsEnabled;
         private SaveResultsStep saveResults;
-
-        public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
         public SaveResultsStep SaveResults { get => saveResults; private set => SetProperty(ref saveResults, value); }
 
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
         {
             if (transitionContext.TransitToStep < transitionContext.TransitedFromStep)
             {
-                // Moving back
-                // TODO: ask user if they want to cancel the operation
-                // ... or maybe we just let it continue
-                //if (Analysis.Running)
-                //{
-                //    try
-                //    {
-                //        Analysis.Cancel();
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        Debug.WriteLine(ex);
-                //    }
-                //}
                 return;
             }
 
@@ -61,24 +44,30 @@ namespace ApexBytez.MediaRecon.ViewModel
             if (transitionContext.TransitToStep > transitionContext.TransitedFromStep)
             {
                 // Forward transition, do Analysis if setup has changed
-
-                // Save the analysis results
-                Task.Run(async () =>
+                if (!transitionContext.SharedContext.ContainsKey("ReconciliationStatistics"))
                 {
-                    // Has the analsis already ran? Don't run it again unless the configuration changes
-                    ForwardButtonIsEnabled = false;
-                    SaveResults = new SaveResultsStep(analysisOptions, analysisResults);
-                    try
+                    // Save the analysis results
+                    Task.Run(async () =>
                     {
-                        await SaveResults.RunAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine(ex.Message);
-                    }
-
-                    ForwardButtonIsEnabled = true;
-                });
+                        // Has the analsis already ran? Don't run it again unless the configuration changes
+                        SaveResults = new SaveResultsStep(analysisOptions, analysisResults);
+                        try
+                        {
+                            DisabledNavigation();
+                            await SaveResults.RunAsync();
+                            transitionContext.SharedContext["ReconciliationStatistics"] = SaveResults;
+                            // TODO: Save the stats to the DB to show on the welcome page!
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine(ex.Message);
+                        }
+                        finally
+                        {
+                            EnableNavigation();
+                        }
+                    });
+                }
 
             }
 

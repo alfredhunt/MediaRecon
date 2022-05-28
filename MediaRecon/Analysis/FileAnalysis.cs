@@ -50,36 +50,48 @@ namespace ApexBytez.MediaRecon
             }
         }
         [Time]
-        public static ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> GetYearMonthSortedFileInfo(IEnumerable<string> directories)
+        public static async Task<ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>>> GetYearMonthSortedFileInfo(IEnumerable<string> directories, CancellationToken cancellationToken)
         {
             ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> concurrentList = new();
-            foreach (string directory in directories)
-            {
-                GetYearMonthSortedFileInfo(new DirectoryInfo(directory), concurrentList);
-            }
+            await Parallel.ForEachAsync(directories,
+                new ParallelOptions { CancellationToken = cancellationToken },
+                async (directory, ct) =>
+                {   
+                    await GetYearMonthSortedFileInfo(new DirectoryInfo(directory), concurrentList, cancellationToken);
+                });
             return concurrentList;
         }
 
-        public static void GetYearMonthSortedFileInfo(DirectoryInfo directoryInfo, ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> concurrentList)
+        public static Task GetYearMonthSortedFileInfo(DirectoryInfo directoryInfo, ConcurrentDictionary<string, ConcurrentDictionary<string, List<FileInfo>>> concurrentList, CancellationToken cancellationToken)
         {
-            // For each file in directory
-            foreach (var file in directoryInfo.EnumerateFiles())
+            return Task.Run(async () =>
             {
-                //var year = file.LastWriteTime.Year;
-                //var month = file.LastWriteTime.Month;
-                var yearMonthKey = file.LastWriteTime.ToString("MM/yyyy");
+                // For each file in directory
+                foreach (var file in directoryInfo.EnumerateFiles())
+                {
+                    //var year = file.LastWriteTime.Year;
+                    //var month = file.LastWriteTime.Month;
+                    var yearMonthKey = file.LastWriteTime.ToString("MM/yyyy");
 
-                var yearMonthDictionary = concurrentList.GetOrAdd(yearMonthKey, new ConcurrentDictionary<string, List<FileInfo>>());
+                    var yearMonthDictionary = concurrentList.GetOrAdd(yearMonthKey, new ConcurrentDictionary<string, List<FileInfo>>());
 
-                var fileNameList = yearMonthDictionary.GetOrAdd(file.Name, new List<FileInfo>());
+                    var fileNameList = yearMonthDictionary.GetOrAdd(file.Name, new List<FileInfo>());
 
-                fileNameList.Add(file);
-            }
-            // Then recurse directories
-            foreach (DirectoryInfo dirInfo in directoryInfo.GetDirectories())
-            {
-                GetYearMonthSortedFileInfo(dirInfo, concurrentList);
-            }
+                    fileNameList.Add(file);
+                }
+                //// Then recurse directories
+                //foreach (DirectoryInfo dirInfo in directoryInfo.GetDirectories())
+                //{
+                //    await GetYearMonthSortedFileInfo(dirInfo, concurrentList);
+                //}
+                await Parallel.ForEachAsync(directoryInfo.GetDirectories(),
+                    new ParallelOptions { CancellationToken = cancellationToken },
+                    async (dirInfo, ct) =>
+                    {
+                        await GetYearMonthSortedFileInfo(dirInfo, concurrentList, cancellationToken);
+                    });
+            });
+            
         }
 
 

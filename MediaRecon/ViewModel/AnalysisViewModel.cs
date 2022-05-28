@@ -13,7 +13,7 @@ using ApexBytez.MediaRecon.Analysis;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
-    internal class AnalysisViewModel : StepViewModelBase
+    internal class AnalysisViewModel : WizardStepViewModel
     {
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
         {
@@ -60,15 +60,20 @@ namespace ApexBytez.MediaRecon.ViewModel
                 Task.Run(async () =>
                 {
                     // Has the analsis already ran? Don't run it again unless the configuration changes
-                    ForwardButtonIsEnabled = false;
+                    
                     Analysis = new MediaAnalysis(options);
                     try
                     {
+                        DisabledNavigation();
                         await Analysis.RunAsync();
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine(ex.Message);
+                    }
+                    finally
+                    {
+                        EnableNavigation();
                     }
 
                     ForwardButtonIsEnabled = true;
@@ -80,9 +85,7 @@ namespace ApexBytez.MediaRecon.ViewModel
         }
 
         private MediaAnalysis? analysis;
-        public bool forwardButtonIsEnabled;
    
         public MediaAnalysis Analysis { get => analysis; set => SetProperty(ref analysis, value); }
-        public bool ForwardButtonIsEnabled { get => forwardButtonIsEnabled; set => SetProperty(ref forwardButtonIsEnabled, value); }
     }
 }
