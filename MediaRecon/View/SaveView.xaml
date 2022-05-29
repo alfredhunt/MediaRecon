@@ -32,39 +32,39 @@
                     <StackPanel Grid.Row="0" Grid.Column="1"  Orientation="Horizontal">
                         <Label Content="{Binding ReconStats.FilesProcessed}"/>
                         <Label Content="/"/>
-                        <Label Content="{Binding AnalysisResults.FileCount}" />
+                        <Label Content="{Binding AnalysisResults.NumberOfFilesInAnalysis}" />
                     </StackPanel>
                     <Label Grid.Row="1" Grid.Column="0" Content="Data Processed"/>
                     <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
                         <Label Content="{Binding ReconStats.DataProcessed, Converter={converters:FileSizeFormatConverter}}" />
                         <Label Content="/"/>
-                        <Label Content="{Binding AnalysisResults.SourceFoldersSize, Converter={converters:FileSizeFormatConverter}}" />
+                        <Label Content="{Binding AnalysisResults.SizeOfDataInAnalysis, Converter={converters:FileSizeFormatConverter}}" />
                     </StackPanel>
 
                     <Label Grid.Row="0" Grid.Column="2" Content="Duplicates Deleted"/>
                     <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal">
                         <Label Content="{Binding ReconStats.DuplicatesDeleted}"/>
                         <Label Content="/"/>
-                        <Label Content="{Binding AnalysisResults.DuplicateCount}"/>
+                        <Label Content="{Binding AnalysisResults.NumberOfDuplicateFiles}"/>
                     </StackPanel>
                     <Label Grid.Row="1" Grid.Column="2" Content="Space Freed"/>
                     <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal">
                         <Label Content="{Binding ReconStats.DuplicateData, Converter={converters:FileSizeFormatConverter}}"/>
                         <Label Content="/"/>
-                        <Label Content="{Binding AnalysisResults.DuplicateSize, Converter={converters:FileSizeFormatConverter}}"/>
+                        <Label Content="{Binding AnalysisResults.SizeOfDuplicateFiles, Converter={converters:FileSizeFormatConverter}}"/>
                     </StackPanel>
 
                     <Label Grid.Row="0" Grid.Column="4" Content="Distinct Saved"/>
                     <StackPanel Grid.Row="0" Grid.Column="5" Orientation="Horizontal">
                         <Label Content="{Binding ReconStats.DistinctSaved}"/>
                         <Label Content="/"/>
-                        <Label Content="{Binding AnalysisResults.DistinctCount}"/>
+                        <Label Content="{Binding AnalysisResults.NumberOfDistinctFiles}"/>
                     </StackPanel>
                     <Label Grid.Row="1" Grid.Column="4" Content="Size on Disk"/>
                     <StackPanel Grid.Row="1" Grid.Column="5" Orientation="Horizontal">
                         <Label Content="{Binding ReconStats.DistinctData, Converter={converters:FileSizeFormatConverter}}"/>
                         <Label Content="/"/>
-                        <Label Content="{Binding AnalysisResults.DistinctSize, Converter={converters:FileSizeFormatConverter}}"/>
+                        <Label Content="{Binding AnalysisResults.SizeOfDistinctFiles, Converter={converters:FileSizeFormatConverter}}"/>
                     </StackPanel>
                     
                 </Grid>

@@ -3,17 +3,48 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:ApexBytez.MediaRecon.View"
+             xmlns:converters="clr-namespace:ApexBytez.MediaRecon.Converters" xmlns:viewmodel="clr-namespace:ApexBytez.MediaRecon.ViewModel" d:DataContext="{d:DesignInstance Type=viewmodel:WelcomeViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Label HorizontalAlignment="Center" VerticalAlignment="Center">
-            <TextBlock Text="MediaRecon" TextWrapping="Wrap" FontSize="80"/>
-        </Label>
-        <Label HorizontalAlignment="Center" VerticalAlignment="Center">
-            <TextBlock Text="Organize your media and remove duplicates" TextWrapping="Wrap"/>
-        </Label>
-    </StackPanel>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="5*"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Label HorizontalAlignment="Center" VerticalAlignment="Center"
+                   FontSize="120"
+                   Content="MediaRecon"/>
+
+            <Label HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Content="Organize your media and remove duplicates"/>
+
+        </StackPanel>
+        <Grid Grid.Row="2" Visibility="{Binding StatisticsPanelVisibility}" Margin="40,0"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Label FontStyle="Italic" Content="{Binding NumberOfFilesAnalayzed}"/>
+                <Label FontStyle="Italic" Content="Files analyzed"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Label FontStyle="Italic" Content="{Binding DuplicateFilesRemoved}"/>
+                <Label FontStyle="Italic" Content="Duplicates removed"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Label FontStyle="Italic" Content="{Binding AmountOfDuplicateDataRemoved, Converter={converters:FileSizeFormatConverter}}"/>
+                <Label FontStyle="Italic" Content="Space freed"/>
+            </StackPanel>
+        </Grid>
+        
+    </Grid>
+    
+    
 
 </UserControl>

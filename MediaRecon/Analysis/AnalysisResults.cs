@@ -8,25 +8,54 @@ namespace ApexBytez.MediaRecon.Analysis
 {
     internal class AnalysisResults : ObservableObject
     {
-        private long fileCount;
+        private long numberOfFilesInAnalysis;
         private long sourceFoldersSize;
-        private long numberOfFiles;
-        private long totalSize;
+        private long numberOfFilesAnalyzed;
+        private long sizeOfDataAnalyzed;
         private long numberOfDuplicateFiles;
-        private long duplicateSize;
+        private long sizeOfDuplicateFiles;
         private long numberOfDistinctFiles;
-        private long distinctSize;
-        public long FileCount { get => fileCount; set => SetProperty(ref fileCount, value); }
-        public long SourceFoldersSize { get => sourceFoldersSize; set => SetProperty(ref sourceFoldersSize, value); }
-        public long NumberOfFiles { get => numberOfFiles; set => SetProperty(ref numberOfFiles, value); }
-        public long TotalSize { get => totalSize; set => SetProperty(ref totalSize, value); }
-        public long DuplicateCount { get => numberOfDuplicateFiles; set => SetProperty(ref numberOfDuplicateFiles, value); }
-        public long DuplicateSize { get => duplicateSize; set => SetProperty(ref duplicateSize, value); }
-        public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
-        public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
+        private long sizeOfDistinctFiles;
+        /// <summary>
+        /// The number of files in this analysis
+        /// </summary>
+        public long NumberOfFilesInAnalysis { get => numberOfFilesInAnalysis; set => SetProperty(ref numberOfFilesInAnalysis, value); }
+        /// <summary>
+        /// The number of files that have been analyzed
+        /// </summary>
+        public long NumberOfFilesAnalyzed { get => numberOfFilesAnalyzed; set => SetProperty(ref numberOfFilesAnalyzed, value); }
+        /// <summary>
+        /// The number of duplicate files found during the analysis
+        /// </summary>
+        public long NumberOfDuplicateFiles { get => numberOfDuplicateFiles; set => SetProperty(ref numberOfDuplicateFiles, value); }
+        /// <summary>
+        /// The number of distinct files found during the analysis
+        /// </summary>
+        public long NumberOfDistinctFiles { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
+        /// <summary>
+        /// The total size of all data in this analysis
+        /// </summary>
+        public long SizeOfDataInAnalysis { get => sourceFoldersSize; set => SetProperty(ref sourceFoldersSize, value); }
+        /// <summary>
+        /// The size of the data that has been analyzed
+        /// </summary>
+        public long SizeOfDataAnalyzed { get => sizeOfDataAnalyzed; set => SetProperty(ref sizeOfDataAnalyzed, value); }
+        /// <summary>
+        /// Size of all duplicate files found in this analysis
+        /// </summary>
+        public long SizeOfDuplicateFiles { get => sizeOfDuplicateFiles; set => SetProperty(ref sizeOfDuplicateFiles, value); }
+        /// <summary>
+        /// Size of all distinct files found in this analysis
+        /// </summary>
+        public long SizeOfDistinctFiles { get => sizeOfDistinctFiles; set => SetProperty(ref sizeOfDistinctFiles, value); }
+        /// <summary>
+        /// This is really just for the second part of the processing where we have
+        /// potential duplicates and conflicts
+        /// </summary>
+
         public ObservableCollection<IFolderViewItem> ReconciledDirectories { get; set; } = new ObservableCollection<IFolderViewItem>();
         public ConcurrentBag<ReconciledFile> ReconciledFiles { get; private set; } = new ConcurrentBag<ReconciledFile>();
         public ObservableCollection<ConflictedFiles> RenamedFiles { get; private set; } = new ObservableCollection<ConflictedFiles>();
-        public long FilesProcessed { get; internal set; }
+        
     }
 }

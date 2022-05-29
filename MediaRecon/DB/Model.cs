@@ -10,8 +10,9 @@ namespace ApexBytez.MediaRecon.DB
 {
     public class MediaReconContext : DbContext
     {
-        public DbSet<File> Files { get; set; }
         public string DbPath { get; }
+        public DbSet<File> Files { get; set; }
+        public DbSet<RunStatistics> RunStatistics { get; set; }
 
         public MediaReconContext()
         {
@@ -26,14 +27,17 @@ namespace ApexBytez.MediaRecon.DB
             => options.UseSqlite($"Data Source={DbPath}");
     }
 
-    public class Analysis
+    public class RunStatistics
     {
         // TODO: definitely want to build this out so we can show statistics over time for the 
-        //  user and how much data they freed up.
-        public long FilesAnalayzed { get; set; }
-        public long DataAnalyzed { get; set; }
+        //  user and how much data/spapce has been freed up.
+        public int RunStatisticsId { get; set; }
+        public DateTime CompletedOn { get; set; }
+        public long NumberOfFilesAnalayzed { get; set; }
+        public long AmountOfDataAnalyzed { get; set; }
+        public long DuplicateFilesFound { get; set; }
         public long DuplicateFilesRemoved { get; set; }
-        public long SpaceSaved { get; set; }
+        public long AmountOfDuplicateDataRemoved { get; set; }
     }
 
     public class FileSystem
@@ -57,6 +61,46 @@ namespace ApexBytez.MediaRecon.DB
 
     public class Database
     {
+        public async Task<RunStatistics> AddRunStatistics(
+            DateTime completedOn,
+            long numberOfFilesAnalayzed, 
+            long amountOfDataAnalyzed,
+            long duplicateFilesFound,
+            long duplicateFilesRemoved,
+            long amountOfDuplicateDataRemoved)
+        {
+            var runStatistics = new DB.RunStatistics
+            {
+                CompletedOn = completedOn,
+                NumberOfFilesAnalayzed = numberOfFilesAnalayzed,
+                AmountOfDataAnalyzed = amountOfDataAnalyzed,
+                DuplicateFilesFound = duplicateFilesFound,
+                DuplicateFilesRemoved = duplicateFilesRemoved,
+                AmountOfDuplicateDataRemoved = amountOfDuplicateDataRemoved
+            };
+
+            using (var db = new MediaReconContext())
+            {
+                db.Add(runStatistics);
+                await db.SaveChangesAsync();
+            }
+
+            return runStatistics;
+        }
+
+        public async Task<List<RunStatistics>?> GetAllRunStatistics()
+        {
+            //
+            // https://docs.microsoft.com/en-us/ef/core/get-started/overview/first-app?tabs=visual-studio
+            //
+            using (var db = new MediaReconContext())
+            {
+                // Does it exist?
+                var results = await db.RunStatistics.ToListAsync();
+                return results;
+            }
+        }
+
         public async Task<File?> GetDBFileInfoAsync(FileInfo fileInfo)
         {
             //

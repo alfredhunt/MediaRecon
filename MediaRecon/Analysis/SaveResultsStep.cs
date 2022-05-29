@@ -197,13 +197,24 @@ namespace ApexBytez.MediaRecon.Analysis
 
                 //await Task.Delay(TimeSpan.FromSeconds(1));
                 messageDisposable.Dispose();
-                await UpdateProgress();
-
-                
             }
             catch (OperationCanceledException ex)
             {
                 Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                await UpdateProgress();
+
+                Database database = new Database();
+                DB.RunStatistics? stats = await database.AddRunStatistics(
+                    DateTime.Now,
+                    AnalysisResults.NumberOfFilesAnalyzed,
+                    AnalysisResults.SizeOfDataAnalyzed,
+                    AnalysisResults.NumberOfDuplicateFiles,
+                    ReconStats.DuplicatesDeleted,
+                    ReconStats.DuplicateData
+                    );
             }
         }
         private async Task RecycleOrDeleteAsync(FileInfo fileInfo, CancellationToken cancellationToken)
@@ -317,7 +328,7 @@ namespace ApexBytez.MediaRecon.Analysis
         {
             return Task.Run(async () =>
             {
-                var progressRatio = ((double)currentProgress.FilesProcessed / AnalysisResults.FileCount);
+                var progressRatio = ((double)currentProgress.FilesProcessed / AnalysisResults.NumberOfFilesInAnalysis);
                 var percentageComplete = progressRatio * 100;
                 var progressBarValue = progressRatio * Properties.Settings.Default.ProgressBarMaximum;
                 var runTime = DateTime.Now - startTime;
