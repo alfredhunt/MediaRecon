@@ -34,7 +34,7 @@ namespace ApexBytez.MediaRecon.Analysis
 
         private void SourceFolders_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            //OnPropertyChanged(nameof(SourceFolders));
+            OnPropertyChanged(nameof(SourceFolders));
         }
 
         public string this[string columnName]

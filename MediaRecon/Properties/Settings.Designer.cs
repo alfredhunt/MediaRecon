@@ -49,5 +49,29 @@ namespace ApexBytez.MediaRecon.Properties {
                 return ((int)(this["DryRunDelay"]));
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastFolderAccessed {
+            get {
+                return ((string)(this["LastFolderAccessed"]));
+            }
+            set {
+                this["LastFolderAccessed"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ReconciliationFolder {
+            get {
+                return ((string)(this["ReconciliationFolder"]));
+            }
+            set {
+                this["ReconciliationFolder"] = value;
+            }
+        }
     }
 }

@@ -139,13 +139,13 @@ namespace ApexBytez.MediaRecon.Analysis
                 }
 
                 await Parallel.ForEachAsync(AnalysisResults.ReconciledFiles,
-                      new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = cancellationToken },
+                      new ParallelOptions { MaxDegreeOfParallelism = 1, CancellationToken = cancellationToken },
                       async (file, ct) =>
                       {
                           try
                           {
                               // Do any of the files already exist in the destination? Keep it, delete the others
-                              var destinationFile = file.Files.FirstOrDefault(x => x.FullName == file.ReconciledFilePath);
+                              var destinationFile = file.Files.FirstOrDefault(x => x.FileInfo.FullName == file.ReconciledFilePath);
 
                               if (destinationFile != null)
                               {
@@ -160,15 +160,15 @@ namespace ApexBytez.MediaRecon.Analysis
                                   lock (tplLock)
                                   {
                                       currentProgress.FilesProcessed++;
-                                      currentProgress.DataProcessed += destinationFile.Length;
+                                      currentProgress.DataProcessed += destinationFile.FileInfo.Length;
                                       currentProgress.DistinctSaved++;
-                                      currentProgress.DistinctData += destinationFile.Length;
+                                      currentProgress.DistinctData += destinationFile.FileInfo.Length;
                                   }
 
                                   // Recycle/Delete the rest
                                   foreach (var item in file.Files)
                                   {
-                                      await RecycleOrDeleteAsync(item, cancellationToken);
+                                      await RecycleOrDeleteAsync(item.FileInfo, cancellationToken);
                                   }
                               }
                               else
@@ -178,14 +178,14 @@ namespace ApexBytez.MediaRecon.Analysis
                                   //    much sense to have a copy strategy at all.
 
                                   // Move/Copy One
-                                  await MoveOrCopyAsync(file.Files.First(), file.ReconciledFilePath, cancellationToken);
+                                  await MoveOrCopyAsync(file.Files.First().FileInfo, file.ReconciledFilePath, cancellationToken);
 
                                   // Recycle/Delete the rest
                                   foreach (var item in file.Files.Skip(1))
                                   {
                                       // TODO: do we want or need to produce a list of all files remove?
                                       // Might be a good idea
-                                      await RecycleOrDeleteAsync(item, cancellationToken);
+                                      await RecycleOrDeleteAsync(item.FileInfo, cancellationToken);
                                   }
                               }
                           }
@@ -230,8 +230,9 @@ namespace ApexBytez.MediaRecon.Analysis
                             {
                                 if (!FileOperationAPIWrapper.MoveToRecycleBin(fileInfo.FullName))
                                 {
-                                    Debug.WriteLine("Failed to recycle {0}", fileInfo.FullName); ;
+                                    Debug.WriteLine("Failed to recycle {0}", fileInfo.FullName);
                                 }
+                                Debug.Assert(!System.IO.File.Exists(fileInfo.FullName));
                             });
                             break;
                         case DeleteStrategy.Delete:
@@ -280,6 +281,7 @@ namespace ApexBytez.MediaRecon.Analysis
                     }
                     else
                     {
+                        Debug.Assert(!System.IO.File.Exists(destination));
                         switch (AnalysisOptions.MoveStrategy)
                         {
                             case MoveStrategy.Copy:

@@ -11,5 +11,11 @@
     <Setting Name="DryRunDelay" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">15</Value>
     </Setting>
+    <Setting Name="LastFolderAccessed" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ReconciliationFolder" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

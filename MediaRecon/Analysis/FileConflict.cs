@@ -8,10 +8,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using ApexBytez.MediaRecon.Extensions;
-
+using System.Windows.Media.Imaging;
+using static ApexBytez.MediaRecon.Analysis.ConflictedFiles;
 
 namespace ApexBytez.MediaRecon.Analysis
 {
+
+
     internal class ReconciledDirectory : ObservableObject, IFolderViewFolder
     {
         public string Name { get; private set; }
@@ -73,19 +76,13 @@ namespace ApexBytez.MediaRecon.Analysis
         AutoRename
     }
 
-    internal abstract class FileRecon
+    internal abstract class ReconciledFile : IFolderViewItem
     {
         public ReconType ReconType { get; }
+        public List<ReconFileInfo> Files { get; protected set; } = new List<ReconFileInfo>();
+        public BitmapImage BitmapImage { get { return Files.First().BitmapImage; } }
 
-        public FileRecon(ReconType type)
-        {
-            ReconType = type;
-        }
-    }
 
-    internal abstract class ReconciledFile : FileRecon, IFolderViewItem
-    {
-        public List<FileInfo> Files { get; protected set; } = new List<FileInfo>();
         public string Name { get; protected set; }
         public string FullName { get; protected set; }
         public DateTime LastWriteTime { get; protected set; }
@@ -94,21 +91,20 @@ namespace ApexBytez.MediaRecon.Analysis
         public string ReconciliationDirectory { get; internal set; }
         public string ReconciledFilePath { get { return Path.Combine(ReconciliationDirectory, Name); } }
 
-        public ReconciledFile(ReconType type) : base(type) 
+        public ReconciledFile(ReconType type)
         {
             Name = String.Empty;
             FullName = String.Empty;
             LastWriteTime = DateTime.Now;
+            ReconType = type;
         }
     }
 
     internal class UniqueFile : ReconciledFile
     {
-        public FileInfo File { get { return Files.First(); } }
-
         public UniqueFile(FileInfo file) : base(ReconType.Distinct)
         {
-            Files.Add(file);
+            Files.Add(new ReconFileInfo(file));
 
             Name = file.Name;
             FullName = file.FullName;
@@ -132,7 +128,7 @@ namespace ApexBytez.MediaRecon.Analysis
 
         public DuplicateFiles(IEnumerable<FileInfo> files) : base(ReconType.Duplicate)
         {
-            Files = files.ToList();
+            Files = files.Select(x => new ReconFileInfo(x)).ToList();
 
             Name = files.First().Name;
             FullName = files.First().FullName;
@@ -151,9 +147,10 @@ namespace ApexBytez.MediaRecon.Analysis
         {
             Name = name;
         }
+
     }
 
-    internal class ConflictedFiles : FileRecon
+    internal class ConflictedFiles
     {
         public string Name { get; private set; }
         public List<ReconciledFile> ReconciledFiles { get; set; } = new List<ReconciledFile>();
@@ -165,7 +162,7 @@ namespace ApexBytez.MediaRecon.Analysis
         public long NumberOfDistinctFiles { get; set; }
         public long NumberOfDuplicateFiles { get; set; }        
 
-        public ConflictedFiles(IEnumerable<IEnumerable<FileInfo>> files) : base(ReconType.AutoRename)
+        public ConflictedFiles(IEnumerable<IEnumerable<FileInfo>> files) 
         {
             Name = files.First().First().Name;
             
@@ -211,6 +208,57 @@ namespace ApexBytez.MediaRecon.Analysis
                 Name, TotalFileCount, NumberOfDuplicateFiles, NumberOfDistinctFiles,
                 TotalFileSystemSize.FormatFileSize(), DuplicateFileSystemSize.FormatFileSize(), DistinctFileSystemSize.FormatFileSize());
         }
+
+        public ConflictedFiles(IEnumerable<IEnumerable<ReconFileInfo>> files) 
+        {
+            Name = files.First().First().FileInfo.Name;
+            
+
+            var extension = Path.GetExtension(Name);
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(Name);
+
+            foreach (var group in files)
+            {
+                var hash = group.First().Hash;
+                var hasIdentifier = BitConverter.ToString(hash).Replace("-", "").Substring(0, 16);
+                var reconFileName = string.Format("{0}-[{1}]{2}", nameWithoutExtension, hasIdentifier, extension);
+
+                if (group.Count() == 1)
+                {
+                    var uniqueFile = new UniqueFile(group.First().FileInfo, reconFileName);
+                    ReconciledFiles.Add(uniqueFile);
+
+                    TotalFileCount++;
+                    TotalFileSystemSize += uniqueFile.Size;
+
+                    NumberOfDistinctFiles++;
+                    DistinctFileSystemSize += uniqueFile.Size;
+                }
+                else
+                {
+                    var duplicateFile = new DuplicateFiles(group.Select(x => x.FileInfo), reconFileName);
+                    ReconciledFiles.Add(duplicateFile);
+
+                    //Debug.Assert(duplicateFile.TotalFileCount == group.Count());
+                    //Debug.Assert(duplicateFile.TotalFileSystemSize == group.Sum(x => x.Length));
+
+                    TotalFileCount += duplicateFile.TotalFileCount;
+                    TotalFileSystemSize += duplicateFile.TotalFileSystemSize;
+
+                    NumberOfDistinctFiles += duplicateFile.NumberOfDistinctFiles;
+                    NumberOfDuplicateFiles += duplicateFile.NumberOfDuplicateFiles;
+                    DistinctFileSystemSize += duplicateFile.Size;
+                    DuplicateFileSystemSize += duplicateFile.DuplicateFileSystemSize;
+                }
+            }
+
+            // File name: {1} Total Files, {2} Distinct Files
+            Description = string.Format("{0}:  {1} Files [{4}],  {2} Duplicate [{5}], {3} Distinct [{6}]",
+                Name, TotalFileCount, NumberOfDuplicateFiles, NumberOfDistinctFiles,
+                TotalFileSystemSize.FormatFileSize(), DuplicateFileSystemSize.FormatFileSize(), DistinctFileSystemSize.FormatFileSize());
+        }
     }
+
+    
 
 }

@@ -121,57 +121,9 @@ namespace ApexBytez.MediaRecon.View
                 }
 
             }
-            }
-
-
-        //private void ListViewItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        //{
-        //    if (sender is ListViewItem)
-        //    {
-        //        IFolderViewItem? folderItem = ((ListViewItem)sender).DataContext as IFolderViewItem;
-        //        if (folderItem != null)
-        //        {
-        //            switch (folderItem.Type)
-        //            {
-        //                case FolderViewItemType.Folder:
-        //                    // Show these items
-        //                    ListView.ItemsSource = ((IFolderViewFolder)folderItem).Items;
-
-        //                    //foreach (var item in ((IFolderViewFolder)folderItem).Items)
-        //                    //{
-        //                    //    ListView.Items.Add(item);
-        //                    //}
-
-
-        //                    break;
-        //                case FolderViewItemType.File:
-        //                    try
-        //                    {
-        //                        //System.Diagnostics.Process.Start(folderItem.Path);
-        //                        System.Diagnostics.Process photoViewer = new System.Diagnostics.Process();
-        //                        photoViewer.StartInfo.FileName = @"explorer.exe";
-        //                        photoViewer.StartInfo.Arguments = folderItem.FullName;
-        //                        photoViewer.Start();
-        //                    }
-        //                    catch (System.ComponentModel.Win32Exception noBrowser)
-        //                    {
-        //                        if (noBrowser.ErrorCode == -2147467259)
-        //                            MessageBox.Show(noBrowser.Message);
-        //                    }
-        //                    catch (System.Exception other)
-        //                    {
-        //                        MessageBox.Show(other.Message);
-        //                    }
-        //                    break;
-        //                default:
-        //                    System.Diagnostics.Debug.Assert(false);
-        //                    break;
-        //            }
-        //        }
-        //    }
-        //}
-
+        }
     }
+
     public enum FolderViewItemType
     {
         Folder,

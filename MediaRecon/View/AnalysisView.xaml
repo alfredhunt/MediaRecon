@@ -55,7 +55,8 @@
                         <DataTemplate DataType="{x:Type analysis:UniqueFile}">
                             <GroupBox Header="Unique">
                                 <StackPanel HorizontalAlignment="Left">
-                                    <Image Source="{Binding FullName}" Width="300"/>
+                                    <Image Source="{Binding BitmapImage}" Width="300"
+                                           HorizontalAlignment="Left"/>
                                     <StackPanel Orientation="Horizontal">
                                         <Label Content="Renamed: "/>
                                         <Label Content="{Binding Name}"/>
@@ -85,7 +86,7 @@
                                     <ListView.ItemTemplate>
                                         <DataTemplate>
                                             <StackPanel>
-                                                <Image Source="{Binding FullName}" Width="300"/>
+                                                <Image Source="{Binding BitmapImage}" Width="300"/>
                                                 <TextBlock Text="{Binding FullName}"/>
                                             </StackPanel>
                                         </DataTemplate>
@@ -139,7 +140,7 @@
                     <Label Grid.Row="0" Grid.Column="2" Content="Duplicates"/>
                     <Label Grid.Row="0" Grid.Column="3" Content="{Binding AnalysisResults.NumberOfDuplicateFiles}"/>
                     <Label Grid.Row="1" Grid.Column="2" Content="Size on Disk"/>
-                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.SizeOfDataAnalyzed, Converter={converters:FileSizeFormatConverter}}"/>
+                    <Label Grid.Row="1" Grid.Column="3" Content="{Binding AnalysisResults.SizeOfDuplicateFiles, Converter={converters:FileSizeFormatConverter}}"/>
                     
                     <Label Grid.Row="0" Grid.Column="4" Content="Distinct"/>
                     <Label Grid.Row="0" Grid.Column="5" Content="{Binding AnalysisResults.NumberOfDistinctFiles}"/>

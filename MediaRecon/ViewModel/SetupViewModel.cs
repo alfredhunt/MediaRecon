@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ApexBytez.MediaRecon.Analysis;
+using System.Windows;
+using System;
 
 namespace ApexBytez.MediaRecon.ViewModel
 {
@@ -32,9 +34,10 @@ namespace ApexBytez.MediaRecon.ViewModel
         {
             AnalysisOptions.SourceFolders.CollectionChanged += SourceFolders_CollectionChanged;
 
-            // DEBUG
-            AnalysisOptions.SourceFolders.Add(@"F:\Pictures");
-            AnalysisOptions.DestinationDirectory = @"F:\TestResults";
+            if (Properties.Settings.Default.ReconciliationFolder.Any())
+            {
+                AnalysisOptions.DestinationDirectory = Properties.Settings.Default.ReconciliationFolder;
+            }
         }
 
         private void SourceFolders_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -74,20 +77,36 @@ namespace ApexBytez.MediaRecon.ViewModel
         }
         private void PerformRemoveSourceFolder()
         {
-            AnalysisOptions.SourceFolders.RemoveAt(SelectedSourceFolderIndex);
-            SelectedSourceFolderIndex = -1;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                AnalysisOptions.SourceFolders.RemoveAt(SelectedSourceFolderIndex);
+                SelectedSourceFolderIndex = AnalysisOptions.SourceFolders.Count() - 1;
+            });
+            
         }
 
         private void ExecuteAddSourceFolderCommand()
         {
             // https://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             CommonOpenFileDialog dialog = new CommonOpenFileDialog();
-            dialog.InitialDirectory = "C:\\";
+            dialog.DefaultDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyComputer);
             dialog.IsFolderPicker = true;
             dialog.Multiselect = true;
+            if (Properties.Settings.Default.LastFolderAccessed.Any())
+            {
+                dialog.InitialDirectory = Properties.Settings.Default.LastFolderAccessed;
+            }
+
             if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
             {
-                AnalysisOptions.SourceFolders.Add(dialog.FileName);
+                foreach (var fileName in dialog.FileNames)
+                {
+                    AnalysisOptions.SourceFolders.Add(fileName);
+                }
+
+                var parentDirectory = System.IO.Path.GetDirectoryName(AnalysisOptions.SourceFolders.First());
+                Properties.Settings.Default.LastFolderAccessed = parentDirectory;
+                Properties.Settings.Default.Save();
             }
         }
 
@@ -95,11 +114,20 @@ namespace ApexBytez.MediaRecon.ViewModel
         {
             CommonOpenFileDialog dialog = new CommonOpenFileDialog();
             // TODO: remember last directory viewed.
-            dialog.InitialDirectory = "C:\\";
+            dialog.DefaultDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyComputer);
             dialog.IsFolderPicker = true;
+            if (Properties.Settings.Default.ReconciliationFolder.Any())
+            {
+                dialog.InitialDirectory = Properties.Settings.Default.ReconciliationFolder;
+            }
             if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
             {
                 AnalysisOptions.DestinationDirectory = dialog.FileName;
+                // TODO: We can probably use this in subsequent runs but 
+                //  we'll have to store it and reload.
+
+                Properties.Settings.Default.ReconciliationFolder = dialog.FileName;
+                Properties.Settings.Default.Save();
             }
         }
     }

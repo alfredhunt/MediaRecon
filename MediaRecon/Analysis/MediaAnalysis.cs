@@ -1,6 +1,7 @@
 ﻿using ApexBytez.MediaRecon.DB;
 using MethodTimer;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,6 +13,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using static ApexBytez.MediaRecon.Analysis.ConflictedFiles;
 
 namespace ApexBytez.MediaRecon.Analysis
 {
@@ -29,6 +31,7 @@ namespace ApexBytez.MediaRecon.Analysis
         private long stage1FilesProcessed;
         private long stage2FilesProcessed;
 
+        
         public AnalysisOptions AnalysisOptions { get; private set; }
         public AnalysisResults AnalysisResults { get; private set; } = new AnalysisResults();
         private ProcessingStages CurrentStage { get; set; }
@@ -132,76 +135,116 @@ namespace ApexBytez.MediaRecon.Analysis
                     new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancellationToken },
                     async (fileList, ct) =>
                     {
-                        Debug.Assert(fileList.Count() > 1);
 
-                        var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList, ct);
-
-                        if (bitwiseGoupings.Count() == 1)
-                        {
-                            var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
-                            lock (tplLock)
-                            {
-                                stage2FilesProcessed += duplicateFiles.TotalFileCount;
-                                currentProgress.NumberOfFilesAnalyzed += duplicateFiles.TotalFileCount;
-                                currentProgress.NumberOfDistinctFiles += duplicateFiles.NumberOfDistinctFiles;
-                                currentProgress.NumberOfDuplicateFiles += duplicateFiles.NumberOfDuplicateFiles;
-                                currentProgress.SizeOfDistinctFiles += duplicateFiles.Size;
-                                currentProgress.SizeOfDuplicateFiles += duplicateFiles.DuplicateFileSystemSize;
-                            }
-
-                            await InsertReconciledFileAsync(duplicateFiles);
-                        }
-
-                        // If 2+, then we have files with the same name but different data and it gets a bit trickier
-                        else if (bitwiseGoupings.Count() > 1)
-                        {
-                            var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
-
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                AnalysisResults.RenamedFiles.Add(conflictedFiles);
-                            });
-                            
-                            foreach (var file in conflictedFiles.ReconciledFiles)
-                            {
-                                switch (file.ReconType)
-                                {
-                                    case ReconType.Duplicate:
-                                        var duplicateFiles = (DuplicateFiles)file;
-                                        lock (tplLock)
-                                        {
-                                            stage2FilesProcessed += duplicateFiles.TotalFileCount;
-                                            currentProgress.NumberOfFilesAnalyzed += duplicateFiles.TotalFileCount;
-                                            currentProgress.NumberOfDistinctFiles += duplicateFiles.NumberOfDistinctFiles;
-                                            currentProgress.NumberOfDuplicateFiles += duplicateFiles.NumberOfDuplicateFiles;
-                                            currentProgress.SizeOfDistinctFiles += duplicateFiles.Size;
-                                            currentProgress.SizeOfDuplicateFiles += duplicateFiles.DuplicateFileSystemSize;
-                                        }
-                                        await InsertReconciledFileAsync(duplicateFiles);
-                                        break;
-                                    case ReconType.Distinct:
-                                        var distinctFile = (UniqueFile)file;
-                                        lock (tplLock)
-                                        {
-                                            stage2FilesProcessed++;
-                                            currentProgress.NumberOfFilesAnalyzed++;
-                                            currentProgress.NumberOfDistinctFiles++;
-                                            currentProgress.SizeOfDistinctFiles += distinctFile.Size;
-                                        }
-                                        await InsertReconciledFileAsync(distinctFile);
-                                        break;
-                                }
-                            }
-                        }
-
+                        await ProcessNonDistinctFilesAsync2(fileList, ct);
                     });
 
+                var reconciledFileName = AnalysisResults.ReconciledFiles.ToList();
+                var fileNameGroups = reconciledFileName.GroupBy(x => x.ReconciledFilePath);
+                var fileConflicts = fileNameGroups.Where(x => x.Count() > 1);
+
+                Debug.WriteLine("");
+                Debug.WriteLine("Conflicts...");
+                foreach (var fileConflict in fileConflicts)
+                {
+                    // Resolve final conflicts
+                    foreach (var file in fileConflict)
+                    {
+                        Debug.WriteLine("{0}: {1}", file.Name, file.ReconciledFilePath);
+
+                    }
+                }
                 Debug.WriteLine("Done analysis");
             }
             catch (OperationCanceledException ex)
             {
-                Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex);
             }
+        }
+
+        private Task ProcessNonDistinctFilesAsync2(List<FileInfo> fileList, CancellationToken ct)
+        {
+            return Task.Run(async () =>
+            {
+                try
+                {
+                    Debug.Assert(fileList.Count() > 1);
+
+                    var bitwiseGoupings = await ToBitwiseGroupsAsync2(fileList, ct);
+
+                    if (bitwiseGoupings.Count() == 1)
+                    {
+                        // Ugly stuff
+                        var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First().Select(x => x.FileInfo).ToList());
+                        lock (tplLock)
+                        {
+                            stage2FilesProcessed += duplicateFiles.TotalFileCount;
+                            currentProgress.NumberOfFilesAnalyzed += duplicateFiles.TotalFileCount;
+                            currentProgress.NumberOfDistinctFiles += duplicateFiles.NumberOfDistinctFiles;
+                            currentProgress.NumberOfDuplicateFiles += duplicateFiles.NumberOfDuplicateFiles;
+                            currentProgress.SizeOfDistinctFiles += duplicateFiles.Size;
+                            currentProgress.SizeOfDuplicateFiles += duplicateFiles.DuplicateFileSystemSize;
+                        }
+
+                        await InsertReconciledFileAsync(duplicateFiles);
+                    }
+
+                    // If 2+, then we have files with the same name but different data and it gets a bit trickier
+                    else if (bitwiseGoupings.Count() > 1)
+                    {
+                        // We need to figure out renaming here at this level where we can
+                        // protect access to a master list of names to avoid conflicts
+
+                        // What if we rename with part of hash  <FileName>-<Hash>.<Extension>
+                        // We could be somewhat reassure that we end up with a duplicate that it's
+                        // highly likely that it's from a previous run and we should do an extra
+                        // comparison on it.
+
+                        var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            AnalysisResults.RenamedFiles.Add(conflictedFiles);
+                        });
+
+                        foreach (var file in conflictedFiles.ReconciledFiles)
+                        {
+                            switch (file.ReconType)
+                            {
+                                case ReconType.Duplicate:
+                                    var duplicateFiles = (DuplicateFiles)file;
+                                    lock (tplLock)
+                                    {
+                                        stage2FilesProcessed += duplicateFiles.TotalFileCount;
+                                        currentProgress.NumberOfFilesAnalyzed += duplicateFiles.TotalFileCount;
+                                        currentProgress.NumberOfDistinctFiles += duplicateFiles.NumberOfDistinctFiles;
+                                        currentProgress.NumberOfDuplicateFiles += duplicateFiles.NumberOfDuplicateFiles;
+                                        currentProgress.SizeOfDistinctFiles += duplicateFiles.Size;
+                                        currentProgress.SizeOfDuplicateFiles += duplicateFiles.DuplicateFileSystemSize;
+                                    }
+                                    await InsertReconciledFileAsync(duplicateFiles);
+                                    break;
+                                case ReconType.Distinct:
+                                    var distinctFile = (UniqueFile)file;
+                                    lock (tplLock)
+                                    {
+                                        stage2FilesProcessed++;
+                                        currentProgress.NumberOfFilesAnalyzed++;
+                                        currentProgress.NumberOfDistinctFiles++;
+                                        currentProgress.SizeOfDistinctFiles += distinctFile.Size;
+                                    }
+                                    await InsertReconciledFileAsync(distinctFile);
+                                    break;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            });
+
         }
 
         [Time]
@@ -324,6 +367,13 @@ namespace ApexBytez.MediaRecon.Analysis
             }
         }
 
+       
+
+        public static string ByteArrayToString(byte[] ba)
+        {
+            return BitConverter.ToString(ba).Replace("-", "");
+        }
+
         private async Task<List<List<FileInfo>>> ToBitwiseGroupsAsync(List<FileInfo> fileList, CancellationToken cancellationToken)
         {
             var bitwiseGoupings = new List<List<FileInfo>>();
@@ -346,6 +396,8 @@ namespace ApexBytez.MediaRecon.Analysis
                     {
                         try 
                         {
+                            // I wonder if I should have just hashed every file, then binned hashes.
+                            // That would be time intensive
                             byte[] hash = await GetFileInfoHashAsync(fileInfo);
                             fileHashes.Add(new Tuple<byte[], FileInfo>(hash, fileInfo));
                         }
@@ -359,6 +411,54 @@ namespace ApexBytez.MediaRecon.Analysis
                     {
                         IEnumerable<FileInfo>? filesPerHash = files.Select(x => x.Item2);
                         bitwiseGoupings.Add(filesPerHash.ToList());
+                    }
+                }
+            }
+
+            return bitwiseGoupings;
+        }
+
+        
+
+        private async Task<List<List<ReconFileInfo>>> ToBitwiseGroupsAsync2(List<FileInfo> fileList, CancellationToken cancellationToken)
+        {
+            var bitwiseGoupings = new List<List<ReconFileInfo>>();
+
+            // filelist here has all of the files with the same name
+            // We can group by length
+            var groupedByLength = fileList.GroupBy(x => x.Length);
+
+            foreach (var filesWithSameLength in groupedByLength)
+            {
+                if (filesWithSameLength.Count() == 1)
+                {
+                    // Only 1 file this length with this name, no hash should match
+                    // BUT now with the new naming scheme, we need the hash of this file too
+                    byte[] hash = await GetFileInfoHashAsync(filesWithSameLength.First());
+                    bitwiseGoupings.Add(new List<ReconFileInfo> { new ReconFileInfo(filesWithSameLength.First(), hash) });
+                }
+                else
+                {
+                    List<ReconFileInfo> fileHashes = new List<ReconFileInfo>();
+                    foreach (var fileInfo in filesWithSameLength)
+                    {
+                        try
+                        {
+                            // I wonder if I should have just hashed every file, then binned hashes.
+                            // That would be time intensive
+                            byte[] hash = await GetFileInfoHashAsync(fileInfo);
+                            fileHashes.Add(new ReconFileInfo(fileInfo, hash));
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine(ex);
+                        }
+                    }
+                    var hashGroups = fileHashes.GroupBy(x => x.Hash, new ArrayComparer<byte>());
+                    foreach (var files in hashGroups)
+                    {
+                        List<ReconFileInfo>? filesPerHash = files.ToList();
+                        bitwiseGoupings.Add(filesPerHash);
                     }
                 }
             }
