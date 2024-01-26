@@ -1,4 +1,4 @@
-﻿using ApexBytez.MediaRecon.View;
+﻿using MediaRecon.View;
 using MvvmWizard.Classes;
 using System;
 using System.Collections.Generic;
@@ -13,10 +13,51 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace ApexBytez.MediaRecon.ViewModel
+namespace MediaRecon.ViewModel
 {
     internal class AnalysisViewModel : StepViewModelBase
     {
+        // Fields
+        private double progressBarValue;
+        private double progressBarMaximum;
+        private long numberOfFolders;
+        private long numberOfFiles;
+        private long totalSize;
+        private long numberOfDuplicateFiles;
+        private long duplicateSize;
+        private long numberOfDistinctFiles;
+        private long distinctSize;
+        private string analysisTime;
+        private long sourceFoldersSize;
+        private long fileCount;
+        private ObservableCollection<IFolderViewItem> reconciledDirectories = new ObservableCollection<IFolderViewItem>();
+        private IEnumerable<string>? folders;
+        private Subject<ConflictedFiles> _conflictResolutions;
+        private IDisposable resolutionDisposable;
+        private Subject<ReconciledFile> _reconciledFiles;
+        private IDisposable reconciledDisposable;
+        private CancellationToken ct;
+        private List<ConflictedFiles> conflictedFiles = new List<ConflictedFiles>();
+        private long folderCount;
+
+        // Properties
+        public double ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
+        public double ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
+        public long NumberOfFolders { get => numberOfFolders; set => SetProperty(ref numberOfFolders, value); }
+        public long NumberOfFiles { get => numberOfFiles; set => SetProperty(ref numberOfFiles, value); }
+        public long TotalSize { get => totalSize; set => SetProperty(ref totalSize, value); }
+        public long DuplicateCount { get => numberOfDuplicateFiles; set => SetProperty(ref numberOfDuplicateFiles, value); }
+        public long DuplicateSize { get => duplicateSize; set => SetProperty(ref duplicateSize, value); }
+        public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
+        public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
+        public string AnalysisTime { get => analysisTime; set => SetProperty(ref analysisTime, value); }
+        public long SourceFoldersSize { get => sourceFoldersSize; set => SetProperty(ref sourceFoldersSize, value); }
+        public long FileCount { get => fileCount; set => SetProperty(ref fileCount, value); }
+        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get => reconciledDirectories; set => SetProperty(ref reconciledDirectories, value); }
+        public ObservableCollection<DuplicateFiles> DuplicateData = new ObservableCollection<DuplicateFiles>();
+        public long FolderCount { get => folderCount; set => SetProperty(ref folderCount, value); }
+
+
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
         {
             if (transitionContext.TransitToStep < transitionContext.TransitedFromStep)
@@ -63,132 +104,139 @@ namespace ApexBytez.MediaRecon.ViewModel
             ProgressBarMaximum = 100;
             FolderCount = folders.Count();
 
-            // This sorted list is binned on file name
-            var sortedFiles = FileAnalysis.GetSortedFileInfo(folders);
-            //var orderedByFileCount = sortedFiles.OrderBy(x => x.Value.Count());
-            FileCount = sortedFiles.Sum(x => x.Value.Count);
-            SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));            
+            try
+            {
+                // This sorted list is binned on file name
+                var sortedFiles = FileAnalysis.GetSortedFileInfo(folders);
+                FileCount = sortedFiles.Sum(x => x.Value.Count);
+                SourceFoldersSize = sortedFiles.Sum(x => x.Value.Sum(y => y.Length));
 
-            TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
+                TimeSpan elapsedTime = TimeSpan.FromSeconds(0);
 
-            var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
-                .TimeInterval()
-                .Subscribe(x =>
-                {
-                    elapsedTime = elapsedTime.Add(x.Interval);
-                    var elapsed = elapsedTime.ToString();
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+                var observableTimer = Observable.Interval(TimeSpan.FromMilliseconds(42))
+                    .TimeInterval()
+                    .Subscribe(x =>
                     {
-                        // TODO: Make this human readable
-                        AnalysisTime = elapsed;
-                    });
-                });
-
-            _conflictResolutions = new Subject<ConflictedFiles>();
-            resolutionDisposable = _conflictResolutions
-                .Subscribe(x =>
-                {
-                    Application.Current.Dispatcher.BeginInvoke(() =>
-                    { 
-                        // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
-                        conflictedFiles.Add(x);
-                    });
-                });
-
-            // Santiy Check
-            long total = 0;
-
-            _reconciledFiles = new Subject<ReconciledFile>();
-            reconciledDisposable = _reconciledFiles
-                .Buffer(TimeSpan.FromMilliseconds(24))
-                //.Buffer(1)
-                .Where(x => x.Count > 0)
-                .Subscribe(x =>
-                {
-                    long distinctCount = DistinctCount;
-                    long distinctSize = DistinctSize;
-                    long duplicateCount = DuplicateCount;
-                    long duplicateSize = DuplicateSize;
-                    long numberOfFiles = NumberOfFiles;
-
-                    foreach (var file in x)
-                    {
-                        switch (file.ReconType)
+                        elapsedTime = elapsedTime.Add(x.Interval);
+                        var elapsed = elapsedTime.ToString();
+                        Application.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
                         {
-                            case ReconType.Duplicate:
-                                var duplicateFiles = (DuplicateFiles)file;
-                                InsertReconciledFile(duplicateFiles);
-                                numberOfFiles += duplicateFiles.TotalFileCount;
-                                distinctCount += duplicateFiles.NumberOfDistinctFiles;
-                                duplicateCount += duplicateFiles.NumberOfDuplicateFiles;
-                                distinctSize += duplicateFiles.Size;
-                                duplicateSize += duplicateFiles.DuplicateFileSystemSize;
-
-                                total += duplicateFiles.Files.Count();
-                                break;
-                            case ReconType.Distinct:
-                                var distinctFile = (UniqueFile)file;
-                                InsertReconciledFile(distinctFile);
-                                numberOfFiles++;
-                                distinctCount++;
-                                distinctSize += distinctFile.Size;
-
-                                total++;
-                                break;
-                        }
-                    }
-
-                    var progressBarValue = ((double)numberOfFiles / FileCount) * 100;
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        DistinctCount = distinctCount;
-                        DuplicateCount = duplicateCount;
-                        DistinctSize = distinctSize;
-                        DuplicateSize = duplicateSize;
-                        NumberOfFiles = numberOfFiles;
-                        TotalSize = DistinctSize + DuplicateSize;
-                        ProgressBarValue = progressBarValue;
+                            // TODO: Make this human readable
+                            AnalysisTime = elapsed;
+                        }));
                     });
-                });
 
-            // TODO: Implement cancel from UI
-            ct = new CancellationToken();
-            await Parallel.ForEachAsync(sortedFiles,
-                new ParallelOptions { MaxDegreeOfParallelism = 16 },
-                async (fileList, ct) =>
-                {
-                    //StatusBarDescription = string.Format("Processing {0}", fileList.Value.First().FullName);
-
-                    if (fileList.Value.Count() == 1)
+                _conflictResolutions = new Subject<ConflictedFiles>();
+                resolutionDisposable = _conflictResolutions
+                    .Subscribe(x =>
                     {
-                        var uniqueFile = new UniqueFile(fileList.Value.First());
-                        _reconciledFiles.OnNext(uniqueFile);
-                    }
-                    // If 2+ items, we analyze
-                    else if (fileList.Value.Count() > 1)
-                    {
-                        var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList.Value, ct);
-                        if (bitwiseGoupings.Count() == 1)
+                        Application.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
                         {
-                            var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
-                            _reconciledFiles.OnNext(duplicateFiles);
-                        }
+                            // TODO: Refactor candidate. If not showing this in new wizard layout can probably get rid of this observable
+                            conflictedFiles.Add(x);
+                        }));
+                    });
 
-                        // If 2+, then we have files with the same name but different data and it gets a bit trickier
-                        else if (bitwiseGoupings.Count() > 1)
+                // Santiy Check
+                long total = 0;
+
+                _reconciledFiles = new Subject<ReconciledFile>();
+                reconciledDisposable = _reconciledFiles
+                    .Buffer(TimeSpan.FromMilliseconds(24))
+                    //.Buffer(1)
+                    .Where(x => x.Count > 0)
+                    .Subscribe(x =>
+                    {
+                        long distinctCount = DistinctCount;
+                        long distinctSize = DistinctSize;
+                        long duplicateCount = DuplicateCount;
+                        long duplicateSize = DuplicateSize;
+                        long numberOfFiles = NumberOfFiles;
+
+                        foreach (var file in x)
                         {
-                            var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
-                            _conflictResolutions.OnNext(conflictedFiles);
-                            foreach (var file in conflictedFiles.ReconciledFiles)
+                            switch (file.ReconType)
                             {
-                                _reconciledFiles.OnNext(file);
+                                case ReconType.Duplicate:
+                                    var duplicateFiles = (DuplicateFiles)file;
+                                    InsertReconciledFile(duplicateFiles);
+                                    numberOfFiles += duplicateFiles.TotalFileCount;
+                                    distinctCount += duplicateFiles.NumberOfDistinctFiles;
+                                    duplicateCount += duplicateFiles.NumberOfDuplicateFiles;
+                                    distinctSize += duplicateFiles.Size;
+                                    duplicateSize += duplicateFiles.DuplicateFileSystemSize;
+
+                                    total += duplicateFiles.Files.Count();
+                                    break;
+                                case ReconType.Distinct:
+                                    var distinctFile = (UniqueFile)file;
+                                    InsertReconciledFile(distinctFile);
+                                    numberOfFiles++;
+                                    distinctCount++;
+                                    distinctSize += distinctFile.Size;
+
+                                    total++;
+                                    break;
                             }
                         }
-                    }
-                });
 
-            observableTimer.Dispose();
-            //StatusBarDescription = "Analysis Complete";
+                        var progressBarValue = ((double)numberOfFiles / FileCount) * 100;
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            DistinctCount = distinctCount;
+                            DuplicateCount = duplicateCount;
+                            DistinctSize = distinctSize;
+                            DuplicateSize = duplicateSize;
+                            NumberOfFiles = numberOfFiles;
+                            TotalSize = DistinctSize + DuplicateSize;
+                            ProgressBarValue = progressBarValue;
+                        });
+                    });
+
+                // TODO: Implement cancel from UI
+                ct = new CancellationToken();
+                await Parallel.ForEachAsync(sortedFiles,
+                    new ParallelOptions { MaxDegreeOfParallelism = 16 },
+                    async (fileList, ct) =>
+                    {
+                        //StatusBarDescription = string.Format("Processing {0}", fileList.Value.First().FullName);
+
+                        if (fileList.Value.Count() == 1)
+                        {
+                            var uniqueFile = new UniqueFile(fileList.Value.First());
+                            _reconciledFiles.OnNext(uniqueFile);
+                        }
+                        // If 2+ items, we analyze
+                        else if (fileList.Value.Count() > 1)
+                        {
+                            var bitwiseGoupings = await ToBitwiseGroupsAsync(fileList.Value, ct);
+                            if (bitwiseGoupings.Count() == 1)
+                            {
+                                var duplicateFiles = new DuplicateFiles(bitwiseGoupings.First());
+                                _reconciledFiles.OnNext(duplicateFiles);
+                            }
+
+                            // If 2+, then we have files with the same name but different data and it gets a bit trickier
+                            else if (bitwiseGoupings.Count() > 1)
+                            {
+                                var conflictedFiles = new ConflictedFiles(bitwiseGoupings);
+                                _conflictResolutions.OnNext(conflictedFiles);
+                                foreach (var file in conflictedFiles.ReconciledFiles)
+                                {
+                                    _reconciledFiles.OnNext(file);
+                                }
+                            }
+                        }
+                    });
+
+                observableTimer.Dispose();
+                //StatusBarDescription = "Analysis Complete";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+            
 
         }
 
@@ -293,71 +341,5 @@ namespace ApexBytez.MediaRecon.ViewModel
                 return obj.Aggregate(string.Empty, (s, i) => s + i.GetHashCode(), s => s.GetHashCode());
             }
         }
-
-
-
-        private double progressBarValue;
-
-        public double ProgressBarValue { get => progressBarValue; set => SetProperty(ref progressBarValue, value); }
-
-        private double progressBarMaximum;
-
-        public double ProgressBarMaximum { get => progressBarMaximum; set => SetProperty(ref progressBarMaximum, value); }
-
-        private long numberOfFolders;
-
-        public long NumberOfFolders { get => numberOfFolders; set => SetProperty(ref numberOfFolders, value); }
-
-        private long numberOfFiles;
-
-        public long NumberOfFiles { get => numberOfFiles; set => SetProperty(ref numberOfFiles, value); }
-
-        private long totalSize;
-
-        public long TotalSize { get => totalSize; set => SetProperty(ref totalSize, value); }
-
-        private long numberOfDuplicateFiles;
-
-        public long DuplicateCount { get => numberOfDuplicateFiles; set => SetProperty(ref numberOfDuplicateFiles, value); }
-
-        private long duplicateSize;
-
-        public long DuplicateSize { get => duplicateSize; set => SetProperty(ref duplicateSize, value); }
-
-        private long numberOfDistinctFiles;
-
-        public long DistinctCount { get => numberOfDistinctFiles; set => SetProperty(ref numberOfDistinctFiles, value); }
-
-        private long distinctSize;
-
-        public long DistinctSize { get => distinctSize; set => SetProperty(ref distinctSize, value); }
-
-        private string analysisTime;
-
-        public string AnalysisTime { get => analysisTime; set => SetProperty(ref analysisTime, value); }
-
-        private long sourceFoldersSize;
-
-        public long SourceFoldersSize { get => sourceFoldersSize; set => SetProperty(ref sourceFoldersSize, value); }
-
-        private long fileCount;
-        public long FileCount { get => fileCount; set => SetProperty(ref fileCount, value); }
-
-
-        private ObservableCollection<IFolderViewItem> reconciledDirectories = new ObservableCollection<IFolderViewItem>();
-        private IEnumerable<string>? folders;
-        private Subject<ConflictedFiles> _conflictResolutions;
-        private IDisposable resolutionDisposable;
-        private Subject<ReconciledFile> _reconciledFiles;
-        private IDisposable reconciledDisposable;
-        private CancellationToken ct;
-
-        public ObservableCollection<IFolderViewItem> ReconciledDirectories { get => reconciledDirectories; set => SetProperty(ref reconciledDirectories, value); }
-
-        private List<ConflictedFiles> conflictedFiles = new List<ConflictedFiles>();
-
-        private long folderCount;
-
-        public long FolderCount { get => folderCount; set => SetProperty(ref folderCount, value); }
     }
 }

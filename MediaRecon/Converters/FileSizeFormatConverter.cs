@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Markup;
 
-namespace ApexBytez.MediaRecon.Converters
+namespace MediaRecon.Converters
 {
     /// <summary>
     /// 

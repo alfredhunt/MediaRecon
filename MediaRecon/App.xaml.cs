@@ -1,4 +1,4 @@
-﻿using ApexBytez.MediaRecon.View;
+﻿using MediaRecon.View;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using MvvmWizard.Classes;
-using ApexBytez.MediaRecon.ViewModel;
+using MediaRecon.ViewModel;
 
 namespace MediaRecon
 {

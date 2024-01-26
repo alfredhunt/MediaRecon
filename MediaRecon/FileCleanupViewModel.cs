@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-namespace ApexBytez.MediaRecon
+namespace MediaRecon
 {
     public class FileCleanupViewModel
     {

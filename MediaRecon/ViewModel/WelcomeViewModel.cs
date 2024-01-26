@@ -1,7 +1,7 @@
 ﻿using MvvmWizard.Classes;
 using System.Threading.Tasks;
 
-namespace ApexBytez.MediaRecon.ViewModel
+namespace MediaRecon.ViewModel
 {
     internal class WelcomeViewModel : StepViewModelBase
     {

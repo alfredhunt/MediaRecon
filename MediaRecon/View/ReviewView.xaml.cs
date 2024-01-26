@@ -1,4 +1,4 @@
-﻿using ApexBytez.MediaRecon.ViewModel;
+﻿using MediaRecon.ViewModel;
 using MediaRecon;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace ApexBytez.MediaRecon.View
+namespace MediaRecon.View
 {
     /// <summary>
     /// Interaction logic for ReviewAndSaveView.xaml

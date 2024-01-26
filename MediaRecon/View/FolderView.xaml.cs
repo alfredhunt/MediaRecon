@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace ApexBytez.MediaRecon.View
+namespace MediaRecon.View
 {
     /// <summary>
     /// Interaction logic for FolderView.xaml

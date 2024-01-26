@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace ApexBytez.MediaRecon.Events
+namespace MediaRecon.Events
 {
     public class DialogResults<T>
     {
@@ -25,14 +25,7 @@ namespace ApexBytez.MediaRecon.Events
             GetT = t;
         }
     }
-    public class MainWindowLoaded
-    {
-        public MainWindow MainWindow { get; private set; }
-        public MainWindowLoaded(MainWindow window)
-        {
-            MainWindow = window;
-        }
-    }
+
     public class SystemFolderUserRequest : RequestMessage<DialogResults<DirectoryInfo>>
     { }
     

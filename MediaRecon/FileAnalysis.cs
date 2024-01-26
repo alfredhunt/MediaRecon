@@ -7,8 +7,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Shapes;
 
-namespace ApexBytez.MediaRecon
+namespace MediaRecon
 {
     internal class FileAnalysis
     {
@@ -33,35 +34,57 @@ namespace ApexBytez.MediaRecon
             var sortedList = new SortedList<string, List<FileInfo>>();
             foreach (string directory in directories)
             {
-                GetSortedFileInfo(directory, sortedList);
+                try
+                {
+                    GetSortedFileInfo(directory, sortedList);
+                }
+                catch (Exception)
+                {
+                    // Log exception error message and continue parsing the directory.
+                }
             }
             return sortedList;
         }
 
         public static void GetSortedFileInfo(string directory, SortedList<string, List<FileInfo>> sortedList)
         {
-            GetSortedFileInfo(new DirectoryInfo(directory), sortedList);
-        }
+            try
+            {
+                // Add the files in this directory
+                foreach (var file in Directory.EnumerateFiles(directory))
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(file);
+                        var key = fileInfo.Name;
 
-        public static void GetSortedFileInfo(DirectoryInfo directoryInfo, SortedList<string, List<FileInfo>> sortedList)
-        {
-            // Add this directories files 
-            foreach (var file in directoryInfo.EnumerateFiles())
-            {
-                if (sortedList.ContainsKey(file.Name))
-                {
-                    sortedList[file.Name].Add(file);
+                        if (sortedList.ContainsKey(key))
+                        {
+                            sortedList[key].Add(fileInfo);
+                        }
+                        else
+                        {
+                            sortedList.Add(key, new List<FileInfo>() { fileInfo });
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Log exception error message and continue parsing the directory.
+                    }
                 }
-                else
+
+
+                // Then recurse directories
+                foreach (var dirPath in Directory.GetDirectories(directory))
                 {
-                    sortedList.Add(file.Name, new List<FileInfo>() { file });
+                    GetSortedFileInfo(dirPath, sortedList);
                 }
             }
-            // Then recurse directories
-            foreach (DirectoryInfo dirInfo in directoryInfo.GetDirectories())
+            catch (Exception)
             {
-                GetSortedFileInfo(dirInfo, sortedList);
+                // Log exception error message and continue parsing the directory.
             }
+
         }
 
 

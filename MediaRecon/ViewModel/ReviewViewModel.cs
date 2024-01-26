@@ -1,13 +1,20 @@
-﻿using ApexBytez.MediaRecon.View;
+﻿using MediaRecon.View;
 using MvvmWizard.Classes;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace ApexBytez.MediaRecon.ViewModel
+namespace MediaRecon.ViewModel
 {
     internal class ReviewViewModel : StepViewModelBase
     {
+
+        private IEnumerable<IFolderViewItem> reconciled = new List<IFolderViewItem>();
+
+        private IEnumerable<ConflictedFiles> renamedFiles = new List<ConflictedFiles>();
+
+        public IEnumerable<ConflictedFiles> RenamedFiles { get => renamedFiles; set => SetProperty(ref renamedFiles, value); }
+
         public override async Task OnTransitedFrom(TransitionContext transitionContext)
         {
             if (transitionContext.TransitToStep < transitionContext.TransitedFromStep)
@@ -39,10 +46,6 @@ namespace ApexBytez.MediaRecon.ViewModel
             // Load data here
             return base.OnTransitedTo(transitionContext);
         }
-        private IEnumerable<IFolderViewItem> reconciled = new List<IFolderViewItem>();
 
-        private IEnumerable<ConflictedFiles> renamedFiles = new List<ConflictedFiles>();
-
-        public IEnumerable<ConflictedFiles> RenamedFiles { get => renamedFiles; set => SetProperty(ref renamedFiles, value); }
     }
 }

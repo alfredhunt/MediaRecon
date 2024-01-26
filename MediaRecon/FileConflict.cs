@@ -1,4 +1,4 @@
-﻿using ApexBytez.MediaRecon.View;
+﻿using MediaRecon.View;
 using MethodTimer;
 using Microsoft.Toolkit.Mvvm.ComponentModel;
 using System;
@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 
 
-namespace ApexBytez.MediaRecon
+namespace MediaRecon
 {
     internal class ReconciledDirectory : ObservableObject, IFolderViewFolder
     {

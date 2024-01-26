@@ -1,5 +1,5 @@
-﻿using ApexBytez.MediaRecon.Events;
-using ApexBytez.MediaRecon.ViewModel;
+﻿using MediaRecon.Events;
+using MediaRecon.ViewModel;
 using MediaRecon;
 using MethodTimer;
 using Microsoft.Toolkit.Mvvm.Messaging;
@@ -8,7 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace ApexBytez.MediaRecon.View
+namespace MediaRecon.View
 {
     /// <summary>
     /// Interaction logic for SetupView.xaml
